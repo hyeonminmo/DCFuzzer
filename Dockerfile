@@ -1,136 +1,129 @@
+FROM fuzzer_base2/aflgo as aflgo
+FROM fuzzer_base/windranger as windranger
+FROM fuzzer_base/dafl as dafl
+
+FROM dcfuzz_bench2/aflgo as bench_aflgo
+FROM dcfuzz_bench/windranger as bench_windranger
+FROM dcfuzz_bench/dafl as bench_dafl
+FROM dcfuzz_bench/asan as bench_asan
+FROM dcfuzz_bench/patch as bench_patch
+
 FROM ubuntu:20.04
-ENV DEBIAN_FRONTEND noninteractive
 
-RUN sed -i 's/archive.ubuntu.com/ftp.daumkakao.com/g' /etc/apt/sources.list
+ARG USER
+ARG UID
+ARG GID
 
-ENV DEBIAN FRONTED="noninteractive"
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -yy libc6-dev binutils libgcc-9-dev
-RUN apt-get install -yy \
-      wget apt-transport-https git unzip \
-      build-essential libtool libtool-bin gdb \
-      automake autoconf bison flex python python3 sudo vim
+SHELL ["/bin/bash", "-c"]
 
 
-ENV OUT=/out
-ENV SRC=/src
-ENV WORK=/work
-ENV PATH="$PATH:/out"
-RUN mkdir -p $OUT $SRC $WORK
-ENV CMAKE_VERSION 3.21.1
-RUN wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-Linux-x86_64.sh && \
-    chmod +x cmake-$CMAKE_VERSION-Linux-x86_64.sh && \
-    ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --skip-license --prefix="/usr/local" && \
-    rm cmake-$CMAKE_VERSION-Linux-x86_64.sh && \
-    rm -rf /usr/local/doc/cmake /usr/local/bin/cmake-gui
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONIOENCODING=utf8 \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
 
-COPY docker-setup/checkout_build_install_llvm.sh /root/
-RUN /root/checkout_build_install_llvm.sh
-RUN rm /root/checkout_build_install_llvm.sh
 
-# Install packages needed for fuzzers and benchmark
+## Install proper tools
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential cmake git curl wget unzip \
+    autoconf automake libtool bison flex \
+    zlib1g-dev libssl-dev python3 python3-pip \
+    clang-format clang-tidy \
+    ninja-build pkg-config lcov python3-setuptools \
+    python3-dev libglib2.0-dev libxml2-dev libclang-12-dev llvm-12-dev \
+    libncurses5-dev libsqlite3-dev \
+    tzdata sudo vim tmux htop zsh
+
+
 RUN apt-get update && \
     apt-get install -yy \
-      # Several packages get uninstalled after LLVM setup.
-      git build-essential bc \
-      # For ParmeSan
-      golang \
-      # For Beacon
-      libncurses5 \
-      # For libming
-      libfreetype6 libfreetype6-dev \
-      # For libxml
-      python-dev \
-      # For libjpeg
-      nasm \
-      # For lrzip
-      libbz2-dev liblzo2-dev
-
-# Create a benchmark directory setup basic stuff.
-RUN mkdir -p /benchmark/bin && \
-    mkdir -p /benchmark/seed && \
-    mkdir -p /benchmark/runtime && \
-    mkdir -p /benchmark/poc &&\
-    mkdir -p /benchmark/dict
-COPY docker-setup/seed/empty /benchmark/seed/empty
-ENV ASAN_OPTIONS=allocator_may_return_null=1,detect_leaks=0
-WORKDIR /benchmark
+    git build-essential bc \
+    golang binutils-gold \
+    libncurses5 \
+    libfreetype6 libfreetype6-dev \
+    python-dev \
+    nasm \
+    libbz2-dev liblzo2-dev
 
 
-# To use ASAN during the benchmark build, these option are needed.
-ENV ASAN_OPTIONS=allocator_may_return_null=1,detect_leaks=0
-
-COPY docker-setup/benchmark-project /benchmark/project
-COPY docker-setup/target/line /benchmark/target/line
-COPY docker-setup/build_bench_common.sh /benchmark/build_bench_common.sh
 
 
-# Create a fuzzer directory and setup fuzzers there.
-RUN mkdir /fuzzer
-WORKDIR /fuzzer
 
-# Setup AFLGo.
-COPY docker-setup/setup_AFLGo.sh /fuzzer/setup_AFLGo.sh
-RUN ./setup_AFLGo.sh
-
-# Setup Beacon.
-COPY docker-setup/pre-builts/Beacon /fuzzer/Beacon
-COPY docker-setup/setup_Beacon.sh /fuzzer/setup_Beacon.sh
-RUN ./setup_Beacon.sh
-
-# Setup WindRanger.
-COPY docker-setup/pre-builts/WindRanger/windranger.tar.gz /fuzzer/windranger.tar.gz
-COPY docker-setup/setup_WindRanger.sh /fuzzer/setup_WindRanger.sh
-RUN ./setup_WindRanger.sh
-
-# Setup SelectFuzz.
-COPY docker-setup/pre-builts/SelectFuzz/SelectFuzz.tar.gz /fuzzer/SelectFuzz.tar.gz
-COPY docker-setup/setup_SelectFuzz.sh /fuzzer/setup_SelectFuzz.sh
-RUN ./setup_SelectFuzz.sh
-
-# Setup DAFL.
-COPY docker-setup/setup_DAFL.sh /fuzzer/setup_DAFL.sh
-RUN ./setup_DAFL.sh
+### Copy fuzzer and builded program docker image 
 
 
-# Reset the working directory to start building benchmarks.
-WORKDIR /benchmark
+## Copy fuzzer image
 
-# Build benchmarks with ASAN.
-COPY docker-setup/build_bench_ASAN.sh /benchmark/build_bench_ASAN.sh
-RUN ./build_bench_ASAN.sh
+COPY --chown=$UID:$GID --from=aflgo /fuzzer /fuzzer
+COPY --chown=$UID:$GID --from=windranger /fuzzer /fuzzer
+COPY --chown=$UID:$GID --from=dafl /fuzzer /fuzzer
 
-# Build benchmarks with AFLGo.
-COPY docker-setup/build_bench_AFLGo.sh /benchmark/build_bench_AFLGo.sh
-RUN ./build_bench_AFLGo.sh
+## Copy program with each fuzzer image 
 
-# Build benchmarks with Beacon.
-COPY docker-setup/build_bench_Beacon.sh /benchmark/build_bench_Beacon.sh
-RUN ./build_bench_Beacon.sh
+#COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/bin /benchmark/bin
+COPY --chown=$UID:$GID --from=bench_asan /benchmark/bin /benchmark/bin
+COPY --chown=$UID:$GID --from=bench_patch /benchmark/bin /benchmark/bin
+COPY --chown=$UID:$GID --from=bench_windranger /benchmark/bin /benchmark/bin
+COPY --chown=$UID:$GID --from=bench_dafl /benchmark /benchmark
+COPY --chown=$UID:$GID --from=bench_dafl /sparrow /sparrow
+COPY --chown=$UID:$GID --from=bench_dafl /smake /smake
 
-# Build benchmarks with WindRanger.
-COPY docker-setup/build_bench_WindRanger.sh /benchmark/build_bench_WindRanger.sh
-RUN ./build_bench_WindRanger.sh
 
-# Build benchmarks with SelectFuzz.
-COPY docker-setup/build_bench_SelectFuzz.sh /benchmark/build_bench_SelectFuzz.sh
-RUN ./build_bench_SelectFuzz.sh
 
-# Build benchmarks with DAFL.
-COPY scripts /benchmark/scripts
-COPY docker-setup/build_bench_DAFL.sh /benchmark/build_bench_DAFL.sh
-RUN ./build_bench_DAFL.sh
 
-# Build patched binaries
-COPY docker-setup/triage /benchmark/triage
-COPY docker-setup/build_patched.sh /benchmark/build_patched.sh
-RUN ./build_patched.sh
+# Copy 
+COPY --chown=$UID:$GID --from=bench_aflgo /benchmark /benchmark
+#COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/poc /benchmark/
+#COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/seed /benchmark/seed
+#COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/target /benchmark/target
+#COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/triage /benchmark/triage
 
-# Copy tool running scripts.
-COPY docker-setup/tool-script /tool-script
 
-# Reset the working directory to top-level directory.
-WORKDIR /
+
+### 
+
+
+USER root
+
+## install newer python3 
+RUN apt install -y --no-install-recommends make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev tk-dev ca-certificates
+
+RUN wget https://www.python.org/ftp/python/3.9.4/Python-3.9.4.tgz \
+    && tar xf Python-3.9.4.tgz \
+    && cd Python-3.9.4 \
+    && ./configure \
+    && make -j8 install
+
+RUN curl https://bootstrap.pypa.io/get-pip.py -o /get-pip.py && python3 /get-pip.py
+
+
+# set timezone
+ENV TZ=America/New_York
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# some useful tools
+RUN apt-get install -y zsh locales direnv highlight jq
+RUN locale-gen en_US.UTF-8
+
+
+COPY init.sh /
+COPY dcfuzz/ /dcfuzz/dcfuzz
+COPY setup.py /dcfuzz/
+COPY requirements.txt /dcfuzz/
+
+RUN pip install /dcfuzz
+
+RUN groupadd -g $GID -o $USER
+
+RUN adduser --disabled-password --gecos '' -u $UID -gid $GID ${USER}
+RUN adduser ${USER} sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+USER $USER
+
+WORKDIR /home/$USER
 
 
 

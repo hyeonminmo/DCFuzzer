@@ -10,9 +10,6 @@ COPY targetBuild/triage /benchmark/triage
 ENV ASAN_OPTIONS=allocator_may_return_null=1,detect_leaks=0
 WORKDIR /benchmark
 
-RUN echo "****************build aflgo**************************"
-
-COPY aflgo/build_bench_aflgo.sh /benchmark/build_bench_aflgo.sh
-RUN ./build_bench_aflgo.sh
-RUN rm /benchmark/build_bench_aflgo.sh
+COPY targetBuild/build_patched.sh /benchmark/build_patched.sh
+RUN ./build_patched.sh
 

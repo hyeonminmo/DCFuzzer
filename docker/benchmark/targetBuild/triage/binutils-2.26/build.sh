@@ -10,6 +10,7 @@ wget $URL -O $ARCHIVE
 rm -rf $DIRNAME
 tar -xzf $ARCHIVE || exit 1
 cd $DIRNAME
+patch -p2 < $1
 ./configure $CONFIG_OPTIONS || exit 1
 ## Parallel building according to https://github.com/aflgo/aflgo/issues/59
 ## Altohough an issue with parallel building is observed in libxml (https://github.com/aflgo/aflgo/issues/41), 

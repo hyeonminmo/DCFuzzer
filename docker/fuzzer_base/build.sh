@@ -1,11 +1,14 @@
 #!/bin/bash -e
 SCRIPT_DIR=$(dirname $(realpath $0))
-export IMAGE_PREFIX=fuzzer_base
+export IMAGE_PREFIX=fuzzer_base3
 
 fuzzer_list=(
     base
     aflgo
     windranger
+    dafl
+    score
+    distance
 )
 
 USER=$(id -un)

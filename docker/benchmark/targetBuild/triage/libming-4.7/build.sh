@@ -12,6 +12,7 @@ RELEVANT_BINARIES="swftophp"
 [ ! -e SRC ] && git clone $GIT_URL SRC
 cd SRC
 git checkout $TAG_NAME
+patch -p2 < $1
 cd ..
 
 build_lib
