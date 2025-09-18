@@ -13,6 +13,7 @@ WORKDIR /benchmark
 RUN echo "****************build aflgo**************************"
 
 COPY aflgo/build_bench_aflgo.sh /benchmark/build_bench_aflgo.sh
+RUN mkdir -p /info/AFLGo
 RUN ./build_bench_aflgo.sh
 RUN rm /benchmark/build_bench_aflgo.sh
 

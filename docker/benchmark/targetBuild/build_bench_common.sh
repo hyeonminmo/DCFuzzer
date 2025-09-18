@@ -44,13 +44,6 @@ function copy_build_result() {
 	    echo "not exist directory"
     fi
 
-    if [ "$4" = "AFLGo" ]; then
-	echo "AFLGO."
-	#echo "$(ls RUNDIR-$1)"
-	#sleep 1800
-    fi
-
-
     cp RUNDIR-$1/$2 /benchmark/bin/$4/$TARG || exit 1
     # If we have 'poc' or 'poc-<binname>' directory, copy it.
     if [[ -d project/$1/poc && ! -d /benchmark/poc/$2 ]]; then
