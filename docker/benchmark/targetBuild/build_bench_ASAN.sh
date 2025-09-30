@@ -25,6 +25,8 @@ build_with_ASAN "libming-4.8" \
     "swftophp 2018-7868 2018-8807 2018-8962 2018-11225 2018-11226 2020-6628 2018-20427 2019-12982" &
 build_with_ASAN "libming-4.8.1" \
     "swftophp-4.8.1 2019-9114" &
+wait
+
 build_with_ASAN "binutils-2.26" \
     "cxxfilt 2016-4487 2016-4489 2016-4490 2016-4491 2016-4492 2016-6131 \
             2016-4489-crash 2016-4489-caller 2016-4492-crash1 2016-4492-crash2" &

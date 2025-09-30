@@ -15,4 +15,4 @@ RUN echo "****************build ASAN********************"
 
 COPY targetBuild/build_bench_ASAN.sh /benchmark/build_bench_ASAN.sh
 RUN ./build_bench_ASAN.sh
-
+RUN rm /benchmark/build_bench_ASAN.sh

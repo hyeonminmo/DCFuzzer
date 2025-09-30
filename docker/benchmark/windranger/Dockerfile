@@ -12,6 +12,8 @@ WORKDIR /benchmark
 
 RUN echo "****************build windranger**************************"
 
+RUN mkdir -p /info/WindRanger
 COPY windranger/build_bench_windranger.sh /benchmark/build_bench_windranger.sh
 RUN ./build_bench_windranger.sh
+RUN rm /benchmark/build_bench_windranger.sh
 

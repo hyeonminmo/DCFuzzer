@@ -5,6 +5,9 @@ build_lib() {
   cp -rf SRC BUILD
   (cd BUILD && ./autogen.sh && ./configure --disable-shared --disable-freetype && make)
 }
+
+echo "*****************libming-4.8.1 file *************************"
+
 GIT_URL="https://github.com/libming/libming.git"
 TAG_NAME="50098023446a5412efcfbd40552821a8cba983a6"
 RELEVANT_BINARIES="swftophp"
@@ -17,6 +20,6 @@ cd ..
 build_lib
 
 for binary in $RELEVANT_BINARIES; do
-  cp BUILD/util/$binary ./$binary-4.8.1
+  cp BUILD/util/$binary ./$binary
 done
 

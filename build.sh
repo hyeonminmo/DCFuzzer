@@ -26,7 +26,7 @@ if [ -e $SCRIPT_DIR/Dockerfile ]; then
             --build-arg USER=$USER \
             --build-arg UID=$_UID \
             --build-arg GID=$GID \
-            -t dcfuzz3 \
+            -t dcfuzz \
             -f $SCRIPT_DIR/Dockerfile \
             "${build_args[@]}" \
             .

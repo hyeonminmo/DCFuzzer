@@ -1,12 +1,15 @@
-FROM fuzzer_base2/aflgo as aflgo
-FROM fuzzer_base/windranger as windranger
-FROM fuzzer_base/dafl as dafl
+FROM fuzzer_base3/aflgo as aflgo
+FROM fuzzer_base3/windranger as windranger
+FROM fuzzer_base3/dafl as dafl
 
-FROM dcfuzz_bench2/aflgo as bench_aflgo
-FROM dcfuzz_bench/windranger as bench_windranger
-FROM dcfuzz_bench/dafl as bench_dafl
+#FROM dcfuzz_bench2/aflgo as bench_aflgo
+FROM aflgo4.8 as bench_aflgo4
+FROM aflgo4.8.1 as bench_aflgo4_2
+FROM aflgoremain as bench_aflgoremain
+FROM dcfuzz_bench2/windranger as bench_windranger
+#FROM dcfuzz_bench/dafl as bench_dafl
 FROM dcfuzz_bench/asan as bench_asan
-FROM dcfuzz_bench/patch as bench_patch
+#FROM dcfuzz_bench/patch as bench_patch
 
 FROM ubuntu:20.04
 
@@ -64,17 +67,20 @@ COPY --chown=$UID:$GID --from=dafl /fuzzer /fuzzer
 
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/bin /benchmark/bin
 COPY --chown=$UID:$GID --from=bench_asan /benchmark/bin /benchmark/bin
-COPY --chown=$UID:$GID --from=bench_patch /benchmark/bin /benchmark/bin
+#COPY --chown=$UID:$GID --from=bench_patch /benchmark/bin /benchmark/bin
 COPY --chown=$UID:$GID --from=bench_windranger /benchmark/bin /benchmark/bin
-COPY --chown=$UID:$GID --from=bench_dafl /benchmark /benchmark
-COPY --chown=$UID:$GID --from=bench_dafl /sparrow /sparrow
-COPY --chown=$UID:$GID --from=bench_dafl /smake /smake
+#COPY --chown=$UID:$GID --from=bench_dafl /benchmark /benchmark
+#COPY --chown=$UID:$GID --from=bench_dafl /sparrow /sparrow
+#COPY --chown=$UID:$GID --from=bench_dafl /smake /smake
 
 
 
 
 # Copy 
-COPY --chown=$UID:$GID --from=bench_aflgo /benchmark /benchmark
+#COPY --chown=$UID:$GID --from=bench_aflgo /benchmark /benchmark
+COPY --chown=$UID:$GID --from=bench_aflgo4 /benchmark /benchmark
+COPY --chown=$UID:$GID --from=bench_aflgo4_2 /benchmark /benchmark
+COPY --chown=$UID:$GID --from=bench_aflgoremain /benchmark /benchmark
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/poc /benchmark/
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/seed /benchmark/seed
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/target /benchmark/target
@@ -97,7 +103,7 @@ RUN wget https://www.python.org/ftp/python/3.9.4/Python-3.9.4.tgz \
     && make -j8 install
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o /get-pip.py && python3 /get-pip.py
-
+RUN rm /Python-3.9.4.tgz
 
 # set timezone
 ENV TZ=America/New_York
