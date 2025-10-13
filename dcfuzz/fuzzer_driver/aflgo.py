@@ -7,7 +7,9 @@ import peewee
 import psutil
 
 from dcfuzz import config as Config
+from .controller import Controller
 from .db import ControllerModel, db_proxy
+from .fuzzer import PSFuzzer, FuzzerDriverException
 
 
 

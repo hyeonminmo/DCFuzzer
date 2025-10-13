@@ -33,7 +33,7 @@ def parse_args(raw_args=None):
                    "--group",
                    type=str,
                    help="group",
-                   choices=['unibench', 'lava', 'fuzzer-test-suite'],
+                   choices=['cxxfilt','swftophp'],
                    required=True)
     p.add_argument("-p", "--program", type=str, help="program", required=True)
     p.add_argument("--args", type=str, help="program argument", required=True)

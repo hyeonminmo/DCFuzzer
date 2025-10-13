@@ -42,6 +42,7 @@ CONFIG: Dict = {
     },
     # only specify basic things
     # how to launch fuzzers with proper arguments is handled by fuzzer driver
+    # new input dir need !!!! OOO
     'fuzzer': {
         'aflgo': {
             'input_dir': INPUT_DIR, # queue dir
@@ -73,7 +74,7 @@ CONFIG: Dict = {
     # each target has a group like e
     'target': {
         'cxxfilt-2016-4489': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'dict': 'jpeg.dict',
             # default is AFL-style (@@ for input file)
@@ -84,7 +85,7 @@ CONFIG: Dict = {
             # rcfuzz will do some sanity check when started.
         },
         'cxxfilt-2016-4490': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
@@ -93,7 +94,7 @@ CONFIG: Dict = {
             }
         },
         'cxxfilt-2016-4491': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
@@ -102,7 +103,7 @@ CONFIG: Dict = {
             }
         },
         'cxxfilt-2016-4492': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
@@ -111,7 +112,7 @@ CONFIG: Dict = {
             }
         },
         'cxxfilt-2016-4492-crash1': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
@@ -120,7 +121,7 @@ CONFIG: Dict = {
             }
         },
         'cxxfilt-2016-4492-crash2': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
@@ -129,12 +130,57 @@ CONFIG: Dict = {
             }
         },
         'cxxfilt-2016-6131': {
-            'group': 'cxxfilt',
+            'group': 'binutils',
             'seed': '/benchmark/seed/cxxfilt',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
             'args': {
                 'default': '',
+            }
+        },
+        'nm-2017-14940': {
+            'group': 'binutils',
+            'seed': '/benchmark/seed/nm-2017-14940',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '-A -a -l -S -s --special-syms --synthetic --with-symbol-versions -D @@',
+            }
+        },
+        'objdump-2017-8392': {
+            'group': 'binutils',
+            'seed': '/benchmark/seed/objdump-2017-8392',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '-SD @@',
+            }
+        },
+        'objdump-2017-8396': {
+            'group': 'binutils',
+            'seed': '/benchmark/seed/objdump-2017-8396',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '-W @@',
+            }
+        },
+        'objdump-2017-8397': {
+            'group': 'binutils',
+            'seed': '/benchmark/seed/objdump-2017-8397',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '-W @@',
+            }
+        },
+        'objdump-2017-8398': {
+            'group': 'binutils',
+            'seed': '/benchmark/seed/objdump-2017-8398',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '-W @@',
             }
         },
         'swftophp-2016-9827': {
@@ -190,9 +236,52 @@ CONFIG: Dict = {
             'args': {
                 'default': '@@',
             }
+        },
+        'swftophp-2018-11225': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2018-11225',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2018-11226': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2018-11226',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2018-20427': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2018-20427',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2019-12982': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2019-12982',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2019-9114': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2019-9114',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
         }
-
-
     }
 
 }

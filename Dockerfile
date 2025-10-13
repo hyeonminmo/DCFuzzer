@@ -7,7 +7,7 @@ FROM aflgo4.8 as bench_aflgo4
 FROM aflgo4.8.1 as bench_aflgo4_2
 FROM aflgoremain as bench_aflgoremain
 FROM dcfuzz_bench2/windranger as bench_windranger
-#FROM dcfuzz_bench/dafl as bench_dafl
+FROM dcfuzz_bench/dafl as bench_dafl
 FROM dcfuzz_bench/asan as bench_asan
 #FROM dcfuzz_bench/patch as bench_patch
 
@@ -81,6 +81,8 @@ COPY --chown=$UID:$GID --from=bench_windranger /benchmark/bin /benchmark/bin
 COPY --chown=$UID:$GID --from=bench_aflgo4 /benchmark /benchmark
 COPY --chown=$UID:$GID --from=bench_aflgo4_2 /benchmark /benchmark
 COPY --chown=$UID:$GID --from=bench_aflgoremain /benchmark /benchmark
+COPY --chown=$UID:$GID --from=bench_dafl /benchmark /benchmark
+
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/poc /benchmark/
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/seed /benchmark/seed
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/target /benchmark/target

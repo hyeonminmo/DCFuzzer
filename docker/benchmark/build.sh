@@ -5,9 +5,9 @@ FUZZER_PREFIX=fuzzer_base3
 
 fuzzer_list=(
     #asan
-    #aflgo
+    aflgo
     #windranger
-    dafl
+    #dafl
     #patch
     #coverage
     #score    

@@ -83,8 +83,6 @@ def gen_fuzzer_driver_args(fuzzer: str,
 def start(fuzzer: str, output_dir, timeout, input_dir=None):
     global FUZZERS,ARGS
 
-    logging.info(f'main 004.5 - start fuction')
-
     fuzzer_config = config['fuzzer'][fuzzer]
     logger.info(f'main 004 - fuzzer_config : {fuzzer_config}')
     create_output_dir = fuzzer_config.get('create_output_dir',True)
@@ -99,7 +97,7 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
             terminate_rcfuzz()
         os.makedirs(host_output_dir, exist_ok=True)
 
-        logger.info(f'main 005 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
+        logger.info(f'main 005_2 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
     
     kw = gen_fuzzer_driver_args(fuzzer=fuzzer, input_dir=input_dir)
 
@@ -192,7 +190,7 @@ def main():
         CPU_ASSIGN[fuzzer] = 0
         logger.info(f'main 003.5 - start before')
         start(fuzzer=fuzzer, output_dir = OUTPUT,timeout=TIMEOUT,input_dir=INPUT)
-        logger.info(f'main 004 - start after')
+        logger.info(f'main 00 - start after')
 
         # start each fuzzer in process
 

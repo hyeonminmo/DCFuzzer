@@ -7,8 +7,9 @@ import peewee
 import psutil
 
 from dcfuzz import config as Config
+from .controller import Controller
 from .db import ControllerModel, db_proxy
-
+from .fuzzer import PSFuzzer, FuzzerDriverException
 
 
 CONFIG = Config.CONFIG
@@ -130,7 +131,7 @@ class DAFL(DAFLBase):
 
 class DAFLController(Controller):
     def __init__(self, seed, output, group, program, argument, thread=1, cgroup_path=''):
-         self.db = peewee.SqliteDatabase(
+        self.db = peewee.SqliteDatabase(
             os.path.join(Config.DATABASE_DIR, 'dcfuzz-dafl.db'))
         self.name = 'dafl'
         self.seed = seed
