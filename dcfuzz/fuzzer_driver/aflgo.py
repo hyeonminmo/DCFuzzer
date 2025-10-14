@@ -2,16 +2,17 @@ import os
 import pathlib
 import sys
 import time
+import logging
 
 import peewee
 import psutil
 
 from dcfuzz import config as Config
 from .controller import Controller
-from .db import ControllerModel, db_proxy
+from .db import AFLGoModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
-
+logger = logging.getLogger('dcfuzz.fuzzer_driver.aflgo')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -32,6 +33,7 @@ def parse_fuzzer_stats(fuzzer_stats_file):
 
 class AFLGoBase(PSFuzzer):
     def __init__(self,seed,output,group,program,argument,cgroup_path='',pid=None):
+        logger.info(f'AFLGoBase class 300 - aflgo base __init__')
         super().__init__(pid)
         self.seed = seed
         self.output = output
@@ -134,10 +136,11 @@ class AFLGo(AFLGoBase):
         args += ['-c', '20h']
         args += ['--', self.target]
         args += self.argument.split(' ')
+        logger.info(f'aflgo class 100 - arg : {args}')
         return args
 
-class AFLGoController(Controller):
-    def __init__(self, seed, output, group, program, argument, thread=1, cgroup_path=''):
+class AFLGOController(Controller):
+    def __init__(self, seed, output, group, program, argument, cgroup_path=''):
         self.db = peewee.SqliteDatabase(
                 os.path.join(Config.DATABASE_DIR, 'dcfuzz-aflgo.db'))
         self.name = 'aflgo'
@@ -146,7 +149,6 @@ class AFLGoController(Controller):
         self.group = group
         self.program = program
         self.argument = argument
-        self.thread = thread
         self.cgroup_path = cgroup_path
         self.aflgos = []
         self.kwargs = {
@@ -155,21 +157,28 @@ class AFLGoController(Controller):
                 'group': self.group,
                 'program': self.program,
                 'argument': self.argument,
-                'thread': self.thread,
                 'cgroup_path' : self.cgroup_path
         }
 
     def init(self):
+        logger.info(f'aflgo controller 001 - init aflgo driver')
         db_proxy.initialize(self.db)
         self.db.connect()
-        self.db.create_tables([AFLGoModel, ControllerModel])
+        self.db.create_tables([AFLGoModel, ControllerModel])        
+        q = AFLGoModel.select()
+        logger.info("AFLGoModel count = %d", q.count())
+        logger.info("DB path = %s", self.db.database)
+        logger.info("AFLGoModel db bound = %r", AFLGoModel._meta.database)
         
-        for fuzzer in AFLGoModel.selct():
-            aflgo = AFLGo(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, thread=fuzzer.thread, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
+        for fuzzer in AFLGoModel.select():
+            logger.info(f'aflgo controller 001_2 - AFLGoModel selected')
+            aflgo = AFLGo(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
+            logger.info(f'aflgo controller 002 - aflgo : {aflgo}')
             self.aflgos.append(aflgo)
 
 
     def start(self):
+        logger.info(f'aflgo controller 003 - start aflgo driver')
         if self.aflgos:
             print('already started', file=sys.stderr)
             return
@@ -179,15 +188,18 @@ class AFLGoController(Controller):
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
+        logger.info(f'aflgo controller 003_5 - start aflgo driver end')
 
     def scale(self, scale_num):
         pass
 
     def pause(self):
+        logger.info(f'aflgo controller 004 - pause aflgo driver')
         for aflgo in self.aflgos:
             aflgo.pause()
 
     def resume(self):
+        logger.info(f'aflgo controller 005 - resume aflgo driver')
         '''
         NOTE: prserve scaling
         '''
@@ -196,6 +208,7 @@ class AFLGoController(Controller):
             aflgo.resume()
 
     def stop(self):
+        logger.info(f'aflgo controller 006 - stop aflgo driver')
         for aflgo in self.aflgos:
             aflgo.stop()
         self.db.drop_tables([AFLGoModel, ControllerModel])

@@ -290,7 +290,7 @@ CONFIG: Dict = {
 
 FUZZERS = [ 'aflgo', 'windranger', 'dafl' ]
 
-DATABASE = tempfile.mkdtemp()
+DATABASE_DIR= tempfile.mkdtemp()
 
 
 

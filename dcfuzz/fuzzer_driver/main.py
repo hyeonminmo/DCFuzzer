@@ -5,11 +5,11 @@ import sys
 import logging
 
 # sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-from .aflgo import AFLGoController
+from .aflgo import AFLGOController
 from .dafl import DAFLController
-#from .qsym import QSYMController
+from .windranger import WINDRANGERController
 
-logger = logging.getLogger('rcfuzz.fuzzer_driver.main')
+logger = logging.getLogger('dcfuzz.fuzzer_driver.main')
 
 
 def str_to_class(classname):
@@ -33,7 +33,7 @@ def parse_args(raw_args=None):
                    "--group",
                    type=str,
                    help="group",
-                   choices=['cxxfilt','swftophp'],
+                   choices=['binutils','swftophp'],
                    required=True)
     p.add_argument("-p", "--program", type=str, help="program", required=True)
     p.add_argument("--args", type=str, help="program argument", required=True)
@@ -58,10 +58,11 @@ def main(fuzzer,
          command,
          cgroup_path='',
          scale_num=1):
+
     controller_class = str_to_class(f'{str.upper(fuzzer)}Controller')
+
     if controller_class is None:
         print(f"{fuzzer} controller doesn't exist.")
-
 
     logger.info(f'fuzzer_driver 001 - controller_class : {controller_class}')
 
@@ -70,13 +71,12 @@ def main(fuzzer,
                                   group=group,
                                   program=program,
                                   argument=argument,
-                                  thread=thread,
                                   cgroup_path=cgroup_path)
-
-    logger.info(f'fuzzer_driver 002 - controller : {controller}')
 
     controller.init()
     command = command
+    
+    logger.info(f'fuzzer_driver 002 - command : {command}')
 
     if command == 'start':
         controller.start()

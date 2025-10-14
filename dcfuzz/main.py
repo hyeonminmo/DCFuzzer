@@ -49,6 +49,19 @@ CGROUP_ROOT = ''
 
 ARGS: cli.ArgsParser
 
+def terminate_dcfuzz():
+    global DCFUZZ_PID
+    logger.critical('terminate dcfuzz because of error')
+    cleanup(1)
+
+def check_fuzzer_ready_one(fuzzer):
+    global ARGS, FUZZERS, TARGET, OUTPUT
+    # NOTE: fuzzer driver will create a ready file when launcing
+    ready_path = os.path.join(OUTPUT, TARGET, fuzzer, 'ready')
+    if not os.path.exists(ready_path):
+        return False
+    return True
+
 
 def gen_fuzzer_driver_args(fuzzer: str,
                            jobs=1,
@@ -64,7 +77,7 @@ def gen_fuzzer_driver_args(fuzzer: str,
         seed = target_config['seed']
     group = target_config['group']
     target_args = target_config['args'].get(fuzzer, target_config['args']['default'])
-    logging.info(f'main 007 - target_args : {target_args}')
+    logging.info(f'main 200 - target_args : {target_args}')
     root_dir = os.path.realpath(ARGS.output)
     output = os.path.join(root_dir, TARGET, fuzzer)
     #cgroup_path = os.path.join(CGROUP_ROOT, fuzzer)
@@ -84,11 +97,11 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
     global FUZZERS,ARGS
 
     fuzzer_config = config['fuzzer'][fuzzer]
-    logger.info(f'main 004 - fuzzer_config : {fuzzer_config}')
+    logger.info(f'main 100 - fuzzer_config : {fuzzer_config}')
     create_output_dir = fuzzer_config.get('create_output_dir',True)
     if create_output_dir:
         host_output_dir = f'{output_dir}/{ARGS.target}/{fuzzer}'
-        logger.info(f'main 005 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
+        logger.info(f'main 101 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
         os.makedirs(host_output_dir, exist_ok=True)
     else:
         host_output_dir = f'{output_dir}/{ARGS.target}'
@@ -97,13 +110,13 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
             terminate_rcfuzz()
         os.makedirs(host_output_dir, exist_ok=True)
 
-        logger.info(f'main 005_2 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
+        logger.info(f'main 101_2 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
     
     kw = gen_fuzzer_driver_args(fuzzer=fuzzer, input_dir=input_dir)
 
     kw['command'] = 'start'
 
-    logger.info(f'main 008 - kw : {kw}')
+    logger.info(f'main 102 - kw : {kw}')
 
     fuzzer_driver.main(**kw)
 
@@ -114,7 +127,7 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
 
 def cleanup(exit_code=0):
     global ARGS
-    logger.info('main 006 - cleanup')
+    logger.info('main 666 - cleanup')
     LOG['end_time'] = time.time()
     #write_log()
     #for fuzzer in FUZZERS:
@@ -188,15 +201,37 @@ def main():
     for fuzzer in FUZZERS:
         logger.info(f'main 003 - warm up {fuzzer}')
         CPU_ASSIGN[fuzzer] = 0
-        logger.info(f'main 003.5 - start before')
-        start(fuzzer=fuzzer, output_dir = OUTPUT,timeout=TIMEOUT,input_dir=INPUT)
-        logger.info(f'main 00 - start after')
 
         # start each fuzzer in process
+        logger.info(f'main 004 - start before')
+        start(fuzzer=fuzzer, output_dir = OUTPUT, timeout=TIMEOUT, input_dir=INPUT)
+        logger.info(f'main 004.5 - start after')  
+
+        time.sleep(2)
+        start_time = time.time()
+        while not check_fuzzer_ready_one(fuzzer):
+            current_time = time.time()
+            elasp = current_time - start_time
+            if elasp > 180:
+                logger.critical('fuzzers start up error')
+                terminate_dcfuzz()
+            logger.info(f'main 666_2 - fuzzer not {fuzzer} ready, sleep 10 seconds to warm up')
+
+        logger.info(f'main 005 - pause before')
+        pause(fuzzer=fuzzer,
+                  jobs=1,
+                  input_dir=INPUT,
+                  empty_seed=ARGS.empty_seed)
+        logger.info(f'main 005.5 - pause before')
+        
+            
+        
 
 
 
 
+
+    logger.info(f'main 999 - end program')
 
 
 

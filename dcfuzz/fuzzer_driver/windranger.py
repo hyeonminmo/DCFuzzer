@@ -8,9 +8,11 @@ import psutil
 
 from dcfuzz import config as Config
 from .controller import Controller
-from .db import ControllerModel, db_proxy
+from .db import WindrangerModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
+
+# xxxx windranger 수정 안 함.
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -29,7 +31,7 @@ def parse_fuzzer_stats(fuzzer_stats_file):
     return ret
 
 
-class AFLGoBase(PSFuzzer):
+class WindrangerBase(PSFuzzer):
     def __init__(self,seed,output,group,program,argument,cgroup_path='',pid=None):
         super().__init__(pid)
         self.seed = seed
@@ -42,9 +44,9 @@ class AFLGoBase(PSFuzzer):
         self.__proc = None
 
     @property
-    def aflgo_command(self):
+    def windranger_command(self):
         global FUZZER_CONFIG
-        return FUZZER_CONFIG['aflgo']['command']
+        return FUZZER_CONFIG['windranger']['command']
 
     def update_fuzzer_stats(self):
         fuzzer_stats_file = f'{self.output}/fuzzer_stats'
@@ -72,7 +74,7 @@ class AFLGoBase(PSFuzzer):
     @property
     def target(self):
         global FUZZER_CONFIG
-        target_root = FUZZER_CONFIG['aflgo']['target_root']
+        target_root = FUZZER_CONFIG['windranger']['target_root']
         return os.path.join(target_root, self.program)
     
     
@@ -100,7 +102,7 @@ class AFLGoBase(PSFuzzer):
         args = []
         if self.cgroup_path:
             args += ['cgexec', '-g', f'cpu:{self.cgroup_path}']
-        args += [self.aflgo_command, '-i', self.seed, '-o', self.output]
+        args += [self.windranger_command, '-i', self.seed, '-o', self.output]
         args += ['-m', 'none']
         args += ['-z', 'exp']
         args += ['-c', '45m']
@@ -110,18 +112,18 @@ class AFLGoBase(PSFuzzer):
 
 
 
-class AFLGo(AFLGoBase):
+class Windranger(WindrangerBase):
     @property
-    def aflgo_command(self):
+    def windranger_command(self):
         global FUZZER_CONFIG
-        return FUZZER_CONFIG['aflgo']['command']
+        return FUZZER_CONFIG['windranger']['command']
 
     def gen_run_args(self):
         self.check()
         args = []
         if self.cgroup_path:
             args += ['cgexec', '-g', f'cpu:{self.cgroup_path}']
-        args += [self.aflgo_command, '-i', self.seed, '-o', self.output]
+        args += [self.windranger_command, '-i', self.seed, '-o', self.output]
         args += ['-m', 'none']
         args += ['-z', 'exp']
         args += ['-c', '45m']
@@ -129,46 +131,44 @@ class AFLGo(AFLGoBase):
         args += self.argument.split(' ')
         return args
 
-class AFLGoController(Controller):
-    def __init__(self, seed, output, group, program, argument, thread=1, cgroup_path=''):
+class WINDRANGERController(Controller):
+    def __init__(self, seed, output, group, program, argument,  cgroup_path=''):
         self.db = peewee.SqliteDatabase(
-            os.path.join(Config.DATABASE_DIR, 'dcfuzz-aflgo.db'))
-        self.name = 'aflgo'
+            os.path.join(Config.DATABASE_DIR, 'dcfuzz-windranger.db'))
+        self.name = 'windranger'
         self.seed = seed
         self.output = output
         self.group = group
         self.program = program
         self.argument = argument
-        self.thread = thread
         self.cgroup_path = cgroup_path
-        self.aflgos = []
+        self.windrangers = []
         self.kwargs = {
             'seed': self.seed,
             'output': self.output,
             'group': self.group,
             'program': self.program,
             'argument': self.argument,
-            'thread': self.thread,
             'cgroup_path' : self.cgroup_path
         }
 
     def init(self):
         db_proxy.initialize(self.db)
         self.db.connect()
-        self.db.create_tables([AFLGoModel, ControllerModel])
+        self.db.create_tables([WindrangerModel, ControllerModel])
         
-        for fuzzer in AFLGoModel.selct():
-            aflgo = AFLGo(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, thread=fuzzer.thread, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
-            self.aflgos.append(aflgo)
+        for fuzzer in WindrangerModel.select():
+            windranger = Windranger(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
+            self.windrangers.append(windranger)
 
 
     def start(self):
-        if self.aflgos:
+        if self.windrangers:
             print('already started', file=sys.stderr)
             return
-        aflgo = AFLGo(**self.kwargs)
-        aflgo.start()
-        AFLGoModel.create(**self.kwargs, pid=aflgo.pid)
+        windranger = Windranger(**self.kwargs)
+        windranger.start()
+        WindrangerModel.create(**self.kwargs, pid=windranger.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
@@ -177,20 +177,20 @@ class AFLGoController(Controller):
         pass
 
     def pause(self):
-        for aflgo in self.aflgos:
-            aflgo.pause()
+        for windranger in self.windrangers:
+            windranger.pause()
 
     def resume(self):
         '''
         NOTE: prserve scaling
         '''
         controller = ControllerModel.get()
-        for aflgo in self.aflgos:
-            aflgo.resume()
+        for windranger in self.windrangers:
+            windranger.resume()
 
     def stop(self):
-        for aflgo in self.aflgos:
-            aflgo.stop()
-        self.db.drop_tables([AFLGoModel, ControllerModel])
+        for windranger in self.windrangers:
+            windranger.stop()
+        self.db.drop_tables([WindrangerModel, ControllerModel])
 
 

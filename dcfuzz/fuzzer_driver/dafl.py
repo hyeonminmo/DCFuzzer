@@ -8,7 +8,7 @@ import psutil
 
 from dcfuzz import config as Config
 from .controller import Controller
-from .db import ControllerModel, db_proxy
+from .db import DAFLModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
 
@@ -130,7 +130,7 @@ class DAFL(DAFLBase):
         return args
 
 class DAFLController(Controller):
-    def __init__(self, seed, output, group, program, argument, thread=1, cgroup_path=''):
+    def __init__(self, seed, output, group, program, argument, cgroup_path=''):
         self.db = peewee.SqliteDatabase(
             os.path.join(Config.DATABASE_DIR, 'dcfuzz-dafl.db'))
         self.name = 'dafl'
@@ -139,7 +139,6 @@ class DAFLController(Controller):
         self.group = group
         self.program = program
         self.argument = argument
-        self.thread = thread
         self.cgroup_path = cgroup_path
         self.dafls = []
         self.kwargs = {
@@ -148,7 +147,6 @@ class DAFLController(Controller):
             'group': self.group,
             'program': self.program,
             'argument': self.argument,
-            'thread': self.thread,
             'cgroup_path' : self.cgroup_path
         }
 
@@ -157,8 +155,8 @@ class DAFLController(Controller):
         self.db.connect()
         self.db.create_tables([DAFLModel, ControllerModel])
         
-        for fuzzer in DAFLModel.selct():
-            dafl = DAFL(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, thread=fuzzer.thread, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
+        for fuzzer in DAFLModel.select():
+            dafl = DAFL(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
             self.dafls.append(dafl)
 
 

@@ -57,9 +57,9 @@ function build_with_AFLGo() {
 # Build with AFLGo
 mkdir -p /benchmark/bin/AFLGo
 build_with_AFLGo "libming-4.7" \
-    "swftophp 2016-9827 2016-9829 2016-9831 2017-9988 2017-11728 2017-11729" &
+    "swftophp 2016-9827 2016-9829 2016-9831 2017-9988 2017-11728 2017-11729"
 build_with_AFLGo "libming-4.8" \
-    "swftophp 2018-7868 2018-8807 2018-8962 2018-11225 2018-11226 2020-6628 2018-20427 2019-12982" &
+    "swftophp 2018-7868 2018-8807 2018-8962 2018-11225 2018-11226 2020-6628 2018-20427 2019-12982"
 build_with_AFLGo "libming-4.8.1" \
     "swftophp 2019-9114"
  
