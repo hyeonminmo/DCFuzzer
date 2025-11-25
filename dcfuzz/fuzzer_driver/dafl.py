@@ -2,6 +2,7 @@ import os
 import pathlib
 import sys
 import time
+import logging
 
 import peewee
 import psutil
@@ -11,6 +12,7 @@ from .controller import Controller
 from .db import DAFLModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
+logger = logging.getLogger('dcfuzz.fuzzer_driver.windranger')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']

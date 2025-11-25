@@ -1,0 +1,1 @@
+dcfuzz -o output -f aflgo windranger dafl -t swftophp-2017-11729

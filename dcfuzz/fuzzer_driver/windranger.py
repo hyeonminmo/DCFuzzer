@@ -2,6 +2,7 @@ import os
 import pathlib
 import sys
 import time
+import logging
 
 import peewee
 import psutil
@@ -11,8 +12,7 @@ from .controller import Controller
 from .db import WindrangerModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
-
-# xxxx windranger 수정 안 함.
+logger = logging.getLogger('dcfuzz.fuzzer_driver.windranger')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -77,19 +77,21 @@ class WindrangerBase(PSFuzzer):
         target_root = FUZZER_CONFIG['windranger']['target_root']
         return os.path.join(target_root, self.program)
     
-    
     def gen_cwd(self):
         return os.path.dirname(self.target)
 
     def gen_env(self):
-        return {
+        env = {
                 'AFL_NO_UI': '1',
                 'AFL_SKIP_CPUFREQ': '1',
                 'AFL_NO_AFFINITY': '1',
                 'AFL_SKIP_CRASHES': '1',
-                'AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES':'1',
+                'AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES': '1',
                 'UBSAN_OPTIONS': 'print_stacktrace=1:halt_on_error=1'
                 }
+        env.pop('ASAN_OPTIONS', None)
+        return env
+
     def check(self):
         ret = True
         ret &= os.path.exists(self.target)
@@ -102,10 +104,10 @@ class WindrangerBase(PSFuzzer):
         args = []
         if self.cgroup_path:
             args += ['cgexec', '-g', f'cpu:{self.cgroup_path}']
+
         args += [self.windranger_command, '-i', self.seed, '-o', self.output]
         args += ['-m', 'none']
-        args += ['-z', 'exp']
-        args += ['-c', '45m']
+        args += ['-d']
         args += ['--', self.target]
         args += self.argument.split(' ')
         return args
@@ -153,16 +155,25 @@ class WINDRANGERController(Controller):
         }
 
     def init(self):
+        logger.info(f'windranger controller 001 - init windranger driver')
         db_proxy.initialize(self.db)
         self.db.connect()
         self.db.create_tables([WindrangerModel, ControllerModel])
+        # check select model
+        q = WindrangerModel.select()
+        logger.info("WindrangerModel count = %d", q.count())
+        logger.info("DB path = %s", self.db.database)
+        logger.info("WindrangerModel db bound = %r", WindrangerModel._meta.database)
         
         for fuzzer in WindrangerModel.select():
+            logger.info(f'windranger controller 001_2 - WindrangerModel selected')
             windranger = Windranger(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
+            logger.info(f'windranger controller 002 - windranger : {windranger}')
             self.windrangers.append(windranger)
-
+            
 
     def start(self):
+        logger.info(f'windranger controller 003 - start windranger driver')
         if self.windrangers:
             print('already started', file=sys.stderr)
             return
@@ -172,15 +183,18 @@ class WINDRANGERController(Controller):
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
+        logger.info(f'windranger controller 003.5 - start windranger driver end')
 
     def scale(self, scale_num):
         pass
 
     def pause(self):
+        logger.info(f'windranger controller 004 - pause windranger driver')
         for windranger in self.windrangers:
             windranger.pause()
 
     def resume(self):
+        logger.info(f'windranger controller 005 - resume windranger driver')
         '''
         NOTE: prserve scaling
         '''
@@ -189,6 +203,7 @@ class WINDRANGERController(Controller):
             windranger.resume()
 
     def stop(self):
+        logger.info(f'windranger controller 006 - stop windranger driver')
         for windranger in self.windrangers:
             windranger.stop()
         self.db.drop_tables([WindrangerModel, ControllerModel])

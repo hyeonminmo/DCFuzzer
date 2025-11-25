@@ -163,7 +163,8 @@ class AFLGOController(Controller):
         logger.info(f'aflgo controller 001 - init aflgo driver')
         db_proxy.initialize(self.db)
         self.db.connect()
-        self.db.create_tables([AFLGoModel, ControllerModel])        
+        self.db.create_tables([AFLGoModel, ControllerModel])
+        # check select model        
         q = AFLGoModel.select()
         logger.info("AFLGoModel count = %d", q.count())
         logger.info("DB path = %s", self.db.database)

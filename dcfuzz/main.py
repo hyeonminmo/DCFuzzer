@@ -25,7 +25,7 @@ from .common import nested_dict
 # set log file
 
 logger = logging.getLogger('DCFuzz.main')
-logging.basicConfig(level=logging.INFO, filename='logDCFuzz.log',filemode='w', format='%(filename)s - %(funcName)s - %(message)s')
+logging.basicConfig(level=logging.INFO, filename='logDCFuzz.log',filemode='w', format='%(filename)s-%(funcName)-10s-%(message)s')
 #logging.basicConfig(level=logging.INFO, filename='logDCFuzz.log',filemode='w', format='%(asctime)s - %(filename)s - %(funcName)s - %(lineno)s - %(message)s')
 
 LOG = nested_dict()
@@ -140,77 +140,77 @@ def pause(fuzzer, jobs=1, input_dir=None):
 
     fuzzer_driver.main(**kw)
 
-def update_fuzzer_log(fuzzers):
-    global LOG
+# def update_fuzzer_log(fuzzers):
+#     global LOG
 
-    logger.info(f'main 301 - update fuzzer')
+#     logger.info(f'main 301 - update fuzzer')
 
-    new_log_entry = maybe_get_fuzzer_info(fuzzers)
-    if not new_log_entry: return
-    new_log_entry = compress_fuzzer_info(fuzzers, new_log_entry)
+#     new_log_entry = maybe_get_fuzzer_info(fuzzers)
+#     if not new_log_entry: return
+#     new_log_entry = compress_fuzzer_info(fuzzers, new_log_entry)
     
-    new_log_entry['timestamp'] = time.time()
-    # NOTE: don't copy twice
-    append_log('log', new_log_entry, do_copy=False)
+#     new_log_entry['timestamp'] = time.time()
+#     # NOTE: don't copy twice
+#     append_log('log', new_log_entry, do_copy=False)
 
 
-def thread_update_fuzzer_log(fuzzers):
-    logger.info(f'main 300 - thread update fuzzer')
-    update_time = min(60, PREP_TIME, SYNC_TIME, FOCUS_TIME)
-    while not is_end():
-        update_fuzzer_log(fuzzers)
-        time.sleep(update_time)
+# def thread_update_fuzzer_log(fuzzers):
+#     logger.info(f'main 300 - thread update fuzzer')
+#     update_time = min(60, PREP_TIME, SYNC_TIME, FOCUS_TIME)
+#     while not is_end():
+#         update_fuzzer_log(fuzzers)
+#         time.sleep(update_time)
 
-# crash mode and empty_seed 는 필요 없음.
-# distance 구하는 이미지가 필요함.
+# # crash mode and empty_seed 는 필요 없음.
+# # distance 구하는 이미지가 필요함.
 
-def maybe_get_fuzzer_info(fuzzers) -> Optional[Coverage]:
+# def maybe_get_fuzzer_info(fuzzers) -> Optional[Coverage]:
 
-    logger.info(f'main 400 - maybe get fuzzer info')
+#     logger.info(f'main 400 - maybe get fuzzer info')
 
-    logger.debug('get_fuzzer_info called')
+#     logger.debug('get_fuzzer_info called')
 
-    new_fuzzer_info = nested_dict()
+#     new_fuzzer_info = nested_dict()
 
-    for fuzzer in fuzzers:
-        result = coverage.thread_run_fuzzer(TARGET,
-                                            fuzzer,
-                                            FUZZERS,
-                                            OUTPUT,
-                                            ARGS.timeout,
-                                            '10s')
-        if result is None:
-            logger.debug(f'get_fuzzer_info: {fuzzer}\'s cov is None')
-            return None
-        cov = result['coverage']
-        unique_bugs = result['unique_bugs']
-        bitmap = result['bitmap']
-        new_fuzzer_info['coverage'][fuzzer] = cov
-        new_fuzzer_info['unique_bugs'][fuzzer] = unique_bugs
-        new_fuzzer_info['bitmap'][fuzzer] = bitmap
-        line_coverage = cov['line_coverage']
-        line = cov['line']
-        logger.debug(
-            f'{fuzzer} has line_coverge {line_coverage} line {line}, bugs {unique_bugs}'
-        )
+#     for fuzzer in fuzzers:
+#         result = coverage.thread_run_fuzzer(TARGET,
+#                                             fuzzer,
+#                                             FUZZERS,
+#                                             OUTPUT,
+#                                             ARGS.timeout,
+#                                             '10s')
+#         if result is None:
+#             logger.debug(f'get_fuzzer_info: {fuzzer}\'s cov is None')
+#             return None
+#         cov = result['coverage']
+#         unique_bugs = result['unique_bugs']
+#         bitmap = result['bitmap']
+#         new_fuzzer_info['coverage'][fuzzer] = cov
+#         new_fuzzer_info['unique_bugs'][fuzzer] = unique_bugs
+#         new_fuzzer_info['bitmap'][fuzzer] = bitmap
+#         line_coverage = cov['line_coverage']
+#         line = cov['line']
+#         logger.debug(
+#             f'{fuzzer} has line_coverge {line_coverage} line {line}, bugs {unique_bugs}'
+#         )
 
-    global_result = coverage.thread_run_global(TARGET,
-                                               FUZZERS,
-                                               OUTPUT,
-                                               ARGS.timeout,
-                                               '10s',
-                                               empty_seed=ARGS.empty_seed,
-                                               crash_mode=ARGS.crash_mode)
-    if global_result is None: return None
-    cov = global_result['coverage']
-    unique_bugs = global_result['unique_bugs']
-    bitmap = global_result['bitmap']
-    new_fuzzer_info['global_coverage'] = cov
-    new_fuzzer_info['global_unique_bugs'] = unique_bugs
-    new_fuzzer_info['global_bitmap'] = bitmap
-    logger.debug(f'global has line_coverge {cov["line"]}, bugs {unique_bugs}')
+#     global_result = coverage.thread_run_global(TARGET,
+#                                                FUZZERS,
+#                                                OUTPUT,
+#                                                ARGS.timeout,
+#                                                '10s',
+#                                                empty_seed=ARGS.empty_seed,
+#                                                crash_mode=ARGS.crash_mode)
+#     if global_result is None: return None
+#     cov = global_result['coverage']
+#     unique_bugs = global_result['unique_bugs']
+#     bitmap = global_result['bitmap']
+#     new_fuzzer_info['global_coverage'] = cov
+#     new_fuzzer_info['global_unique_bugs'] = unique_bugs
+#     new_fuzzer_info['global_bitmap'] = bitmap
+#     logger.debug(f'global has line_coverge {cov["line"]}, bugs {unique_bugs}')
 
-    return new_fuzzer_info
+#     return new_fuzzer_info
 
 
 def cleanup(exit_code=0):
@@ -321,7 +321,7 @@ def main():
 
         pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
 
-        logger.info(f'main 005.5 - pause before')
+        logger.info(f'main 005.5 - pause after')
 
     LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'
     LOG_FILE_NAME = f'{TARGET}_{LOG_DATETIME}.json'
