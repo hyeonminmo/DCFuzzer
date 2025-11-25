@@ -33,7 +33,6 @@ def parse_fuzzer_stats(fuzzer_stats_file):
 
 class AFLGoBase(PSFuzzer):
     def __init__(self,seed,output,group,program,argument,cgroup_path='',pid=None):
-        logger.info(f'AFLGoBase class 300 - aflgo base __init__')
         super().__init__(pid)
         self.seed = seed
         self.output = output
@@ -188,7 +187,7 @@ class AFLGOController(Controller):
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
-        logger.info(f'aflgo controller 003_5 - start aflgo driver end')
+        logger.info(f'aflgo controller 003.5 - start aflgo driver end')
 
     def scale(self, scale_num):
         pass
