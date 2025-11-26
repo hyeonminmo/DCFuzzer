@@ -113,7 +113,6 @@ class WindrangerBase(PSFuzzer):
         return args
 
 
-
 class Windranger(WindrangerBase):
     @property
     def windranger_command(self):
@@ -127,10 +126,10 @@ class Windranger(WindrangerBase):
             args += ['cgexec', '-g', f'cpu:{self.cgroup_path}']
         args += [self.windranger_command, '-i', self.seed, '-o', self.output]
         args += ['-m', 'none']
-        args += ['-z', 'exp']
-        args += ['-c', '45m']
+        args += ['-d']
         args += ['--', self.target]
         args += self.argument.split(' ')
+        logger.info(f'windranger class 100 - arg : {args}')
         return args
 
 class WINDRANGERController(Controller):
@@ -171,7 +170,6 @@ class WINDRANGERController(Controller):
             logger.info(f'windranger controller 002 - windranger : {windranger}')
             self.windrangers.append(windranger)
             
-
     def start(self):
         logger.info(f'windranger controller 003 - start windranger driver')
         if self.windrangers:

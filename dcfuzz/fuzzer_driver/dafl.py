@@ -12,7 +12,7 @@ from .controller import Controller
 from .db import DAFLModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
-logger = logging.getLogger('dcfuzz.fuzzer_driver.windranger')
+logger = logging.getLogger('dcfuzz.fuzzer_driver.dafl')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -129,6 +129,7 @@ class DAFL(DAFLBase):
         args += ['-d']
         args += ['--', self.target]
         args += self.argument.split(' ')
+        logger.info(f'dafl class 100 - arg : {args}')
         return args
 
 class DAFLController(Controller):
@@ -153,16 +154,25 @@ class DAFLController(Controller):
         }
 
     def init(self):
+        logger.info(f'dafl controller 001 - init dafl driver')
         db_proxy.initialize(self.db)
         self.db.connect()
         self.db.create_tables([DAFLModel, ControllerModel])
+        # check select model
+        q = DAFLModel.select()
+        logger.info("DAFLModel count = %d", q.count())
+        logger.info("DB path = %s", self.db.database)
+        logger.info("DAFLModel db bound = %r", DAFLModel._meta.database)
         
         for fuzzer in DAFLModel.select():
+            logger.info(f'dafl controller 001_2 - DAFLModel selected')
             dafl = DAFL(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
+            logger.info(f'dafl controller 002 - dafl : {dafl}')
             self.dafls.append(dafl)
 
 
     def start(self):
+        logger.info(f'dafl controller 003 - start dafl driver')
         if self.dafls:
             print('already started', file=sys.stderr)
             return
@@ -172,15 +182,18 @@ class DAFLController(Controller):
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
+        logger.info(f'dafl controller 003.5 - start dafl driver end')
 
     def scale(self, scale_num):
         pass
 
     def pause(self):
+        logger.info(f'dafl controller 004 - pause dafl driver')
         for dafl in self.dafls:
             dafl.pause()
 
     def resume(self):
+        logger.info(f'dafl controller 005 - resume dafl driver')
         '''
         NOTE: prserve scaling
         '''
@@ -189,6 +202,7 @@ class DAFLController(Controller):
             dafl.resume()
 
     def stop(self):
+        logger.info(f'dafl controller 006 - stop dafl driver')
         for dafl in self.dafls:
             dafl.stop()
         self.db.drop_tables([DAFLModel, ControllerModel])

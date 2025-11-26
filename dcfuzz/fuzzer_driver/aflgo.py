@@ -77,7 +77,6 @@ class AFLGoBase(PSFuzzer):
         target_root = FUZZER_CONFIG['aflgo']['target_root']
         return os.path.join(target_root, self.program)
     
-    
     def gen_cwd(self):
         return os.path.dirname(self.target)
 

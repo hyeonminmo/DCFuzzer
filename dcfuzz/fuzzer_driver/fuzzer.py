@@ -2,11 +2,13 @@ import os
 import subprocess
 import sys
 from abc import ABCMeta, abstractmethod
+import logging
 
 import psutil
 
 from dcfuzz.common import IS_DEBUG
 
+logger = logging.getLogger('dcfuzz.fuzzer_driver.fuzzer')
 
 class FuzzerDriverException(Exception):
     pass
@@ -52,14 +54,17 @@ class PSFuzzer(Fuzzer):
         method to retrive process based on psutils
         '''
         proc = None
+        logger.info(f'fuzzer_driver fuzzer 001 - pid : {self.pid}')
         if not self.pid:
             # print('self.pid not exist')
             return None
+        logger.info(f'fuzzer_driver fuzzer 001.5 - pid_exists={psutil.pid_exists(self.pid)}')
         if psutil.pid_exists(self.pid):
             proc = psutil.Process(pid=self.pid)
         else:
             # print(f'psutil pid not exist {self.pid}')
             return None
+        logger.info(f'fuzzer_driver fuzzer 002 - proc : {proc}')
         return proc
 
     @abstractmethod
@@ -115,6 +120,7 @@ class PSFuzzer(Fuzzer):
         self.run()
 
     def pause(self):
+        logger.info(f'fuzzer_driver fuzzer 003 - proc : {self.proc}')
         if not self.proc:
             raise FuzzerDriverException
         for child in self.proc.children(recursive=True):

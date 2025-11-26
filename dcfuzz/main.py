@@ -318,13 +318,20 @@ def main():
             logger.info(f'main 666_2 - fuzzer not {fuzzer} ready, sleep 10 seconds to warm up')
 
         logger.info(f'main 005 - pause before')
+        try:
+            pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
+            logger.info(f'main 005.5 - pause after')
+        except Exception as e:
+            logger.exception(f'main 005.5 - pause error : %r',e)
+        
 
-        pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
+    logger.info(f'main 999 - end program')
 
-        logger.info(f'main 005.5 - pause after')
 
-    LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'
-    LOG_FILE_NAME = f'{TARGET}_{LOG_DATETIME}.json'
+        
+
+    # LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'
+    # LOG_FILE_NAME = f'{TARGET}_{LOG_DATETIME}.json'
 
     #thread_fuzzer_log = threading.Thread(target=thread_update_fuzzer_log, kwargs={'fuzzers': FUZZERS}, daemon=True)
         
@@ -369,21 +376,9 @@ def main():
 
     # LOG['end_time'] = time.time()
 
-    write_log()
-    logger.info(f'main 999 - end program')
-    cleanup(0)
-
-
-
-
-
-
-
-
-
-
-    
-    
+    # write_log()
+    # logger.info(f'main 999 - end program')
+    # cleanup(0)
 
 
 if __name__ == '__main__':
