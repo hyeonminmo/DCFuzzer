@@ -183,6 +183,7 @@ class AFLGOController(Controller):
             return
         aflgo = AFLGo(**self.kwargs)
         aflgo.start()
+        logger.info(f'aflgo controller 003.25 - pid : {aflgo.pid}')
         AFLGoModel.create(**self.kwargs, pid=aflgo.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')

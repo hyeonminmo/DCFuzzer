@@ -15,9 +15,10 @@ import traceback
 
 from pathlib import Path
 from typing import Dict, List, Optional
+from cgroupspy import trees
 
 
-from . import cli
+from . import cgroup_utils, cli
 from . import config as Config
 from . import fuzzer_driver # , sync, fuzzing
 from .common import nested_dict
@@ -113,7 +114,7 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
         host_output_dir = f'{output_dir}/{ARGS.target}'
         if os.path.exists(f'{output_dir}/{ARGS.target}/{fuzzer}'):
             logger.error(f'Please remove {output_dir}/{ARGS.target}/{fuzzer}')
-            terminate_rcfuzz()
+            terminate_dcfuzz()
         os.makedirs(host_output_dir, exist_ok=True)
 
         logger.info(f'main 101_2 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
@@ -256,6 +257,39 @@ def init():
 
 # we create init_cgroup
 
+def init_cgroup():
+    '''
+    cgroup /dcfuzz is created by /init.sh, the command is the following:
+
+    cgcreate -t yufu -a yufu -g cpu:/dcfuzz
+    '''
+    global FUZZERS, CGROUP_ROOT
+    # start with /
+    cgroup_path = cgroup_utils.get_cgroup_path()
+    container_id = os.path.basename(cgroup_path)
+    cgroup_path_fs = os.path.join('/sys/fs/cgroup/cpu', cgroup_path[1:])
+    dcfuzz_cgroup_path_fs = os.path.join(cgroup_path_fs, 'dcfuzz')
+    # print(dcfuzz_cgroup_path_fs)
+    if not os.path.exists(dcfuzz_cg1oup_path_fs):
+        logger.critical(
+            'dcfuzz cgroup not exists. make sure to run /init.sh first')
+        terminate_dcfuzz()
+    t = trees.Tree()
+    p = os.path.join('/cpu', cgroup_path[1:], 'dcfuzz')
+    CGROUP_ROOT = os.path.join(cgroup_path, 'dcfuzz')
+    # print('CGROUP_ROOT', CGROUP_ROOT)
+    cpu_node = t.get_node_by_path(p)
+    for fuzzer in FUZZERS:
+        fuzzer_cpu_node = t.get_node_by_path(os.path.join(p, fuzzer))
+        if not fuzzer_cpu_node:
+            fuzzer_cpu_node = cpu_node.create_cgroup(fuzzer)
+        cfs_period_us = fuzzer_cpu_node.controller.cfs_period_us
+        # default to JOBS / num_of_fuzzers
+        # defaut to full
+        quota = int(cfs_period_us * (JOBS))
+        # print(fuzzer_cpu_node, quota)
+        fuzzer_cpu_node.controller.cfs_quota_us = quota
+    return True
 
 
 def main():
@@ -296,6 +330,9 @@ def main():
     LOG['dcfuzz_config'] = config
     LOG['start_time'] = current_time
     LOG['algorithm'] = None
+
+    # setup cgroup
+    init_cgroup()
 
     # setup each fuzzer
     for fuzzer in FUZZERS:

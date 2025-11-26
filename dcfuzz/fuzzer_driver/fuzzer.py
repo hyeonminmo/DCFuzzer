@@ -107,10 +107,11 @@ class PSFuzzer(Fuzzer):
                                     stdin=subprocess.DEVNULL,
                                     stdout=subprocess.DEVNULL,
                                     stderr=subprocess.DEVNULL)
-
+        # 여기서 subprocess.Popen() 하면서 dafl 의 pid 생성이 됨.   
         assert proc
         self.__proc = proc
         self.__pid = proc.pid
+        logger.info(f'fuzzer_driver fuzzer 666 - proc : {proc}, pid : {self.pid}, args : {args}, cwd : {cwd}')
 
     def start(self):
         if self.proc:
@@ -120,7 +121,7 @@ class PSFuzzer(Fuzzer):
         self.run()
 
     def pause(self):
-        logger.info(f'fuzzer_driver fuzzer 003 - proc : {self.proc}')
+        logger.info(f'fuzzer_driver fuzzer 003 pause')
         if not self.proc:
             raise FuzzerDriverException
         for child in self.proc.children(recursive=True):

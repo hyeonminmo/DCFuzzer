@@ -176,8 +176,9 @@ class DAFLController(Controller):
         if self.dafls:
             print('already started', file=sys.stderr)
             return
-        dafl = DAFL(**self.kwargs)
+        dafl = DAFL(**self.kwargs) 
         dafl.start()
+        logger.info(f'dafl controller 003.25 - pid : {dafl.pid}')
         DAFLModel.create(**self.kwargs, pid=dafl.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')

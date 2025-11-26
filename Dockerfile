@@ -48,7 +48,7 @@ RUN apt-get update && \
     libbz2-dev liblzo2-dev
 
 
-
+RUN apt update && apt install -y protobuf-compiler cgroup-tools lcov
 
 
 ### Copy fuzzer and builded program docker image 
