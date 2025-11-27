@@ -160,13 +160,13 @@ class DAFLController(Controller):
         self.db.create_tables([DAFLModel, ControllerModel])
         # check select model
         q = DAFLModel.select()
-        logger.info("DAFLModel count = %d", q.count())
-        logger.info("DB path = %s", self.db.database)
-        logger.info("DAFLModel db bound = %r", DAFLModel._meta.database)
+        # logger.info("DAFLModel count = %d", q.count())
+        # logger.info("DB path = %s", self.db.database)
+        # logger.info("DAFLModel db bound = %r", DAFLModel._meta.database)
         
         for fuzzer in DAFLModel.select():
             dafl = DAFL(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
-            logger.info(f'dafl controller 002 - dafl : {dafl}')
+            # logger.info(f'dafl controller 002 - dafl : {dafl}')
             self.dafls.append(dafl)
 
 
@@ -177,12 +177,10 @@ class DAFLController(Controller):
             return
         dafl = DAFL(**self.kwargs) 
         dafl.start()
-        logger.info(f'dafl controller 003.25 - pid : {dafl.pid}')
         DAFLModel.create(**self.kwargs, pid=dafl.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
-        logger.info(f'dafl controller 003.5 - start dafl driver end')
 
     def scale(self, scale_num):
         pass

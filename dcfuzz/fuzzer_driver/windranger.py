@@ -161,16 +161,16 @@ class WINDRANGERController(Controller):
         self.db.create_tables([WindRangerModel, ControllerModel])
         # check select model
         q = WindRangerModel.select()
-        logger.info("WindRangerModel count = %d", q.count())
-        logger.info("DB path = %s", self.db.database)
-        logger.info("WindRangerModel db bound = %r", WindRangerModel._meta.database)
+        # logger.info("WindRangerModel count = %d", q.count())
+        # logger.info("DB path = %s", self.db.database)
+        # logger.info("WindRangerModel db bound = %r", WindRangerModel._meta.database)
 
         # copy distance
         self.copy_distance()
-        
+
         for fuzzer in WindRangerModel.select():
             windranger = Windranger(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
-            logger.info(f'windranger controller 002 - windranger : {windranger}')
+            # logger.info(f'windranger controller 002 - windranger : {windranger}')
             self.windrangers.append(windranger)
             
     def start(self):
@@ -180,12 +180,10 @@ class WINDRANGERController(Controller):
             return
         windranger = Windranger(**self.kwargs)
         windranger.start()
-        logger.info(f'windranger controller 003.25 - pid : {windranger.pid}')
         WindRangerModel.create(**self.kwargs, pid=windranger.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
-        logger.info(f'windranger controller 003.5 - start windranger driver end')
 
     def scale(self, scale_num):
         pass
@@ -211,7 +209,7 @@ class WINDRANGERController(Controller):
         self.db.drop_tables([WindRangerModel, ControllerModel])
 
     def copy_distance(self):
-        logger.info(f'windranger class 002 - copy distance')
+        logger.info(f'windranger controller 666 - copy distance')
         program_name = self.program
         target_root = FUZZER_CONFIG['windranger']['target_root']
 

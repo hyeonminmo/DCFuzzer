@@ -165,13 +165,13 @@ class AFLGOController(Controller):
         self.db.create_tables([AFLGoModel, ControllerModel])
         # check select model        
         q = AFLGoModel.select()
-        logger.info("AFLGoModel count = %d", q.count())
-        logger.info("DB path = %s", self.db.database)
-        logger.info("AFLGoModel db bound = %r", AFLGoModel._meta.database)
+        # logger.info("AFLGoModel count = %d", q.count())
+        # logger.info("DB path = %s", self.db.database)
+        # logger.info("AFLGoModel db bound = %r", AFLGoModel._meta.database)
         
         for fuzzer in AFLGoModel.select():
             aflgo = AFLGo(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
-            logger.info(f'aflgo controller 002 - aflgo : {aflgo}')
+            # logger.info(f'aflgo controller 002 - aflgo : {aflgo}')
             self.aflgos.append(aflgo)
 
 
@@ -182,12 +182,10 @@ class AFLGOController(Controller):
             return
         aflgo = AFLGo(**self.kwargs)
         aflgo.start()
-        logger.info(f'aflgo controller 003.25 - pid : {aflgo.pid}')
         AFLGoModel.create(**self.kwargs, pid=aflgo.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
-        logger.info(f'aflgo controller 003.5 - start aflgo driver end')
 
     def scale(self, scale_num):
         pass

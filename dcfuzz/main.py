@@ -8,11 +8,13 @@ import time
 import signal
 import atexit
 import datetime
+import json
 
 import math
 import random
 import traceback
 
+from abc import abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional
 from cgroupspy import trees
@@ -22,6 +24,7 @@ from . import cgroup_utils, cli
 from . import config as Config
 from . import fuzzer_driver # , sync, fuzzing
 from .common import nested_dict
+from .singleton import SingletonABCMeta
 
 # set log file
 
@@ -36,6 +39,8 @@ START_TIME: float = 0.0
 config: Dict = Config.CONFIG
 OUTPUT: Path
 INPUT: Optional[Path]
+LOG_DATETIME: str
+LOG_FILE_NAME: str
 
 TIMEOUT: int
 PREP_TIME: int
@@ -43,6 +48,8 @@ FOCUS_TIME: int
 START_TIME:float = 0.0
 
 SLEEP_GRANULARITY: int = 60
+
+RUNNING: bool = False
 
 FUZZERS: List[str]= []
 TARGET: str
@@ -56,6 +63,18 @@ def terminate_dcfuzz():
     logger.critical('terminate dcfuzz because of error')
     cleanup(1)
 
+def is_end():
+    logger.info('main 900 - check end time')
+    global START_TIME
+    diff = 60
+    current_time = time.time()
+    elasp = current_time - START_TIME
+    timeout_seconds = TIMEOUT
+    logger.info(f'main 900 - elasp : {elasp}, timeout_seconds :{timeout_seconds}, current_time : {current_time}, START_TIME : {START_TIME} ')
+    return elasp >= timeout_seconds + diff
+
+
+
 def check_fuzzer_ready_one(fuzzer):
     global ARGS, FUZZERS, TARGET, OUTPUT
     # NOTE: fuzzer driver will create a ready file when launcing
@@ -64,6 +83,22 @@ def check_fuzzer_ready_one(fuzzer):
         return False
     return True
 
+def sleep(seconds: int, log=False):
+    logger.info(f'main 901 -  sleep time: {seconds}, log: {log}')
+    '''
+    hack to early return
+    '''
+    global SLEEP_GRANULARITY
+    if log:
+        logger.info(f'main 902 - sleep {seconds} seconds')
+    else:
+        logger.debug(f' sleep {seconds} seconds')
+    remain = seconds
+    while remain and not is_end():
+        t = min(remain, SLEEP_GRANULARITY)
+        logger.info(f'main 903 - remain: {remain}, SLEEP_GRAUNLARITY: {SLEEP_GRANULARITY}, t : {t}')
+        time.sleep(t)
+        remain -= t
 
 def gen_fuzzer_driver_args(fuzzer: str,
                            jobs=1,
@@ -86,7 +121,7 @@ def gen_fuzzer_driver_args(fuzzer: str,
 
     root_dir = os.path.realpath(ARGS.output)
     output = os.path.join(root_dir, TARGET, fuzzer)
-    #cgroup_path = os.path.join(CGROUP_ROOT, fuzzer)
+    cgroup_path = os.path.join(CGROUP_ROOT, fuzzer)
     kw = {
         'fuzzer': fuzzer,
         'seed': seed,
@@ -94,8 +129,8 @@ def gen_fuzzer_driver_args(fuzzer: str,
         'group': group,
         'program': TARGET,
         'argument': target_args,
-        'thread': jobs
-        #'cgroup_path': cgroup_path
+        'thread': jobs,
+        'cgroup_path': cgroup_path
     }
     return kw
 
@@ -108,7 +143,7 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
     create_output_dir = fuzzer_config.get('create_output_dir',True)
     if create_output_dir:
         host_output_dir = f'{output_dir}/{ARGS.target}/{fuzzer}'
-        logger.info(f'main 101 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
+        # logger.info(f'main 101 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
         os.makedirs(host_output_dir, exist_ok=True)
     else:
         host_output_dir = f'{output_dir}/{ARGS.target}'
@@ -117,7 +152,7 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
             terminate_dcfuzz()
         os.makedirs(host_output_dir, exist_ok=True)
 
-        logger.info(f'main 101_2 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
+        # logger.info(f'main 101_2 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
     
     kw = gen_fuzzer_driver_args(fuzzer=fuzzer, input_dir=input_dir)
 
@@ -141,78 +176,78 @@ def pause(fuzzer, jobs=1, input_dir=None):
 
     fuzzer_driver.main(**kw)
 
-# def update_fuzzer_log(fuzzers):
-#     global LOG
-
-#     logger.info(f'main 301 - update fuzzer')
-
-#     new_log_entry = maybe_get_fuzzer_info(fuzzers)
-#     if not new_log_entry: return
-#     new_log_entry = compress_fuzzer_info(fuzzers, new_log_entry)
+def resume(fuzzer, jobs=1, input_dir=None):
+    '''
+    call Fuzzer API to resume fuzzer
+    '''
+    logger.info(f'main 105 - resume function {fuzzer}')
     
-#     new_log_entry['timestamp'] = time.time()
-#     # NOTE: don't copy twice
-#     append_log('log', new_log_entry, do_copy=False)
+    kw = gen_fuzzer_driver_args(fuzzer=fuzzer, jobs=1, input_dir=input_dir)
+
+    kw['command'] = 'resume'
+
+    logger.info(f'main 106 - resume func kw : {kw}')
+
+    fuzzer_driver.main(**kw)
+
+def stop(fuzzer, jobs=1, input_dir=None):
+    '''
+    call Fuzzer API to stop fuzzer
+    '''
+    logger.info(f'main 107 - stop function {fuzzer}')
+    
+    kw = gen_fuzzer_driver_args(fuzzer=fuzzer,jobs=1, input_dir=input_dir)
+
+    kw['command'] = 'stop'
+
+    logger.info(f'main 108 - stop func kw : {kw}')
+
+    fuzzer_driver.main(**kw)
+
+def set_fuzzer_cgroup(fuzzer, new_cpu):
+    global CGROUPR_ROOT
+    p = os.path.join('/cpu', CGROUP_ROOT[1:], fuzzer)
+    t = trees.Tree()
+    fuzzer_cpu_node = t.get_node_by_path(p)
+    cfs_period_us = fuzzer_cpu_node.controller.cfs_period_us
+    quota = int(cfs_period_us * new_cpu)
+    # NOTE: minimal possible number for cgroup
+    if quota < 1000:
+        quota = 1000
+    logger.debug(f'set fuzzer cgroup {fuzzer} {new_cpu} {quota}')
+    fuzzer_cpu_node.controller.cfs_quota_us = quota
 
 
-# def thread_update_fuzzer_log(fuzzers):
-#     logger.info(f'main 300 - thread update fuzzer')
-#     update_time = min(60, PREP_TIME, SYNC_TIME, FOCUS_TIME)
-#     while not is_end():
-#         update_fuzzer_log(fuzzers)
-#         time.sleep(update_time)
+def update_fuzzer_limit(fuzzer, new_cpu):
+    logger.info('main 400 - update fuzzer limit start')
+    global ARGS, CPU_ASSIGN, INPUT
+    if fuzzer not in CPU_ASSIGN: return
+    if math.isclose(CPU_ASSIGN[fuzzer], new_cpu):
+        return
+    is_pause = math.isclose(0, new_cpu)
+    logger.info(f'main 401 - is_pause : {is_pause}')
+
+    if is_pause:        
+        # print('update pause')
+        pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
+
+    # previous 0
+    if math.isclose(CPU_ASSIGN[fuzzer], 0) and new_cpu != 0:
+        logger.info(f'main 401.5 - resumestart')
+        resume(fuzzer=fuzzer, jobs=1, input_dir=ARGS.input)  
+
+    CPU_ASSIGN[fuzzer] = new_cpu
+
+    # setup cgroup
+    if not is_pause:
+        set_fuzzer_cgroup(fuzzer, new_cpu)
+    else:
+        # give 1%
+        set_fuzzer_cgroup(fuzzer, 0.01)
+    logger.info('main 402 - update fuzzer limit end')
 
 # # crash mode and empty_seed 는 필요 없음.
 # # distance 구하는 이미지가 필요함.
-
-# def maybe_get_fuzzer_info(fuzzers) -> Optional[Coverage]:
-
-#     logger.info(f'main 400 - maybe get fuzzer info')
-
-#     logger.debug('get_fuzzer_info called')
-
-#     new_fuzzer_info = nested_dict()
-
-#     for fuzzer in fuzzers:
-#         result = coverage.thread_run_fuzzer(TARGET,
-#                                             fuzzer,
-#                                             FUZZERS,
-#                                             OUTPUT,
-#                                             ARGS.timeout,
-#                                             '10s')
-#         if result is None:
-#             logger.debug(f'get_fuzzer_info: {fuzzer}\'s cov is None')
-#             return None
-#         cov = result['coverage']
-#         unique_bugs = result['unique_bugs']
-#         bitmap = result['bitmap']
-#         new_fuzzer_info['coverage'][fuzzer] = cov
-#         new_fuzzer_info['unique_bugs'][fuzzer] = unique_bugs
-#         new_fuzzer_info['bitmap'][fuzzer] = bitmap
-#         line_coverage = cov['line_coverage']
-#         line = cov['line']
-#         logger.debug(
-#             f'{fuzzer} has line_coverge {line_coverage} line {line}, bugs {unique_bugs}'
-#         )
-
-#     global_result = coverage.thread_run_global(TARGET,
-#                                                FUZZERS,
-#                                                OUTPUT,
-#                                                ARGS.timeout,
-#                                                '10s',
-#                                                empty_seed=ARGS.empty_seed,
-#                                                crash_mode=ARGS.crash_mode)
-#     if global_result is None: return None
-#     cov = global_result['coverage']
-#     unique_bugs = global_result['unique_bugs']
-#     bitmap = global_result['bitmap']
-#     new_fuzzer_info['global_coverage'] = cov
-#     new_fuzzer_info['global_unique_bugs'] = unique_bugs
-#     new_fuzzer_info['global_bitmap'] = bitmap
-#     logger.debug(f'global has line_coverge {cov["line"]}, bugs {unique_bugs}')
-
-#     return new_fuzzer_info
-
 
 def cleanup(exit_code=0):
     global ARGS
@@ -234,7 +269,7 @@ def cleanup_exception(etype, value, tb):
 def write_log():
     global LOG, RUNNING
     if not RUNNING:
-        logger.info('main 901 - Not RUNNING, No log')
+        logger.info('main 666 - Not RUNNING, No log')
         return
     if OUTPUT and LOG_FILE_NAME:
         with open(f'{OUTPUT}/{LOG_FILE_NAME}', 'w') as f:
@@ -254,8 +289,6 @@ def init():
     LOG['log'] = []
     LOG['round'] = []
     logger.info(f'main 002.5- init end')
-
-# we create init_cgroup
 
 def init_cgroup():
     logger.info(f'main 200 - cgroup init start')
@@ -294,9 +327,147 @@ def init_cgroup():
     return True
 
 
+class SchedulingAlgorithm(metaclass=SingletonABCMeta):
+    @abstractmethod
+    def __init__(self, fuzzers, focus=None, one_core=False, N=1):
+        pass
+
+    @abstractmethod
+    def run(self):
+        pass
+
+class Schedule_Base(SchedulingAlgorithm):
+    def __init__(self,
+                 fuzzers: List[str],
+                 prep_time: int,
+                 focus_time: int,
+                 jobs: int = 1):
+        self.fuzzers = fuzzers
+        #self.rcFuzzers = rcFuzzers
+        self.name = 'schedule_base'
+
+        # to support multicore
+        self.jobs = jobs
+
+        self.round_num = 1
+        self.round_start_time = 0
+        self.first_round = True
+
+        self.collection_fuzzers: List[Fuzzer] = []
+        self.prep_time = prep_time
+        self.prep_time_base = prep_time
+
+        self.focus_time = focus_time
+        self.focus_time_base = focus_time
+
+        self.prep_time_round = 0
+        self.focus_time_round = 0
+
+        self.sync_time = 0
+
+        self.cov_before_collection: Coverage
+        self.cov_before_execution: Coverage
+
+        self.bitmap_contribution: BitmapContribution = {}
+        self.all_bitmap_contribution: BitmapContribution = {}  # will not reset
+        self.round_bitmap_contribution: Deque[BitmapContribution] = deque()
+        self.round_bitmap_intersection_contribution: Deque[
+            BitmapContribution] = deque()
+        self.round_bitmap_distinct_contribution: Deque[
+            BitmapContribution] = deque()
+
+        self.picked_times: Dict[Fuzzer, int]
+        self.diff_threshold = None
+
+    def focus_one(self, focus_fuzzer):
+        assert focus_fuzzer in self.fuzzers
+        for fuzzer in self.fuzzers:
+            new_cpu = 1 if fuzzer == focus_fuzzer else 0
+            update_fuzzer_limit(fuzzer, new_cpu)
+        logger.debug(f'focus one: {focus_fuzzer}')
+    
+    def pre_round(self):
+        pass
+
+    def one_round(self):
+        pass
+
+    def post_round(self):
+        pass
+
+    def main(self):
+        pass
+    
+    def pre_run(self) -> bool:
+        logger.info(f"main 810 - {self.name}: pre_run")
+        return True
+
+    def run(self):
+        if not self.pre_run():
+            return
+        self.main()
+        self.post_run()
+
+    def post_run(self):
+        logger.info(f"main 820 - {self.name}: post_run")
+
+
+
+class Schedule_Focus(Schedule_Base):
+    def __init__(self, fuzzers, focus):
+        self.fuzzers = fuzzers
+        self.focus = focus
+        self.name = f'Focus_{focus}'
+
+    # def pre_round(self):      
+    #     update_success = maybe_get_fuzzer_info(fuzzers=self.fuzzers)
+    #     if not update_success:
+    #         SLEEP = 10
+    #         logger.info(
+    #             f'main 019 - wait for all fuzzer having coverage, sleep {SLEEP} seconds')
+    #         sleep(SLEEP)
+    #         global START_TIME
+    #         elasp = time.time() - START_TIME
+    #         if elasp > 600:
+    #             terminate_rcfuzz()
+    #     return update_success
+
+    # def post_round(self):
+    #     fuzzer_info = get_fuzzer_info(self.fuzzers)
+    #     fuzzer_info = compress_fuzzer_info(self.fuzzers, fuzzer_info)
+    #     append_log('round', {'fuzzer_info': fuzzer_info})
+
+    def one_round(self):
+        logger.info(f'main 701 - one_round start')
+        self.focus_one(self.focus)
+        sleep(60)
+    
+    def main(self):
+        logger.info(f'main 700 - single_fuzzer : {self.focus}')
+        while True:
+            if is_end(): return
+            #if not self.pre_round(): continue
+            self.one_round()
+        logger.info(f'main 709 - end')
+            #self.post_round()
+
+    def pre_run(self) -> bool:
+        logger.info(f"main 710 - {self.name}: pre_run")
+        return True
+
+    def run(self):
+        if not self.pre_run():
+            return
+        self.main()
+        self.post_run()
+
+    def post_run(self):
+        logger.info(f"main 720 - {self.name}: post_run")
+
+
 def main():
-    global ARGS, TARGET, FUZZERS, OUTPUT, INPUT
-    global TIMEOUT, PREP_TIME, FOCUS_TIME, START_TIME
+    global ARGS, TARGET, FUZZERS, OUTPUT, INPUT, TIMEOUT, PREP_TIME, FOCUS_TIME
+    global START_TIME, LOG_DATETIME, LOG_FILE_NAME
     global CPU_ASSIGN
 
 
@@ -326,6 +497,7 @@ def main():
         logger.error(f'remove {OUTPUT}')
         exit(1)
     
+    START_TIME = time.time()
     current_time = time.time()
     init()
     LOG['dcfuzz_args'] = ARGS.as_dict()  # remove Namespace
@@ -354,37 +526,35 @@ def main():
             if elasp > 180:
                 logger.critical('fuzzers start up error')
                 terminate_dcfuzz()
-            logger.info(f'main 666_2 - fuzzer not {fuzzer} ready, sleep 10 seconds to warm up')
+            #logger.info(f'main 666_2 - fuzzer not {fuzzer} ready, sleep 10 seconds to warm up')
 
         logger.info(f'main 005 - pause before')
-        try:
-            pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
-            logger.info(f'main 005.5 - pause after')
-        except Exception as e:
-            logger.exception(f'main 005.5 - pause error : %r',e)
+        pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
+        logger.info(f'main 005.5 - pause after')
         
 
-    logger.info(f'main 999 - end program')
+    LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'
+    LOG_FILE_NAME = f'{TARGET}_{LOG_DATETIME}.json'
 
-
-        
-
-    # LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'
-    # LOG_FILE_NAME = f'{TARGET}_{LOG_DATETIME}.json'
-
-    #thread_fuzzer_log = threading.Thread(target=thread_update_fuzzer_log, kwargs={'fuzzers': FUZZERS}, daemon=True)
+    # 결과들을 캡처하여 저장하는 백그라운드 스레드 영역으로 multi 진행할 때 필요
+    # thread_fuzzer_log = threading.Thread(target=thread_update_fuzzer_log, kwargs={'fuzzers': FUZZERS}, daemon=True)
         
     # thread_fuzzer_log.start()
         
     # thread_health = threading.Thread(target=thread_health_check, daemon=True)
     # thread_health.start()
 
-    # scheduler = None
-    # algorithm = None
+    scheduler = None
+    algorithm = None
 
-    # if ARGS.focus_one:
-    #     scheduler = Schedule_Focus(fuzzers=FUZZERS, focus=ARGS.focus_one)
-    #     algorithm = ARGS.focus_one
+    fuzzerNum = len(FUZZERS) 
+
+    if fuzzerNum == 1:
+        logger.info(f'main 6 - single_fuzzer : {FUZZERS[0]}')
+        scheduler = Schedule_Focus(fuzzers=FUZZERS, focus=FUZZERS[0])
+        algorithm = FUZZERS[0]
+    else: 
+        logger.info(f'main 6 - not yet multi-fuzzer')
 
     # else:
     #     scheduler = Schedule_DCFuzz(fuzzers=FUZZERS, dcFuzzers=dcFuzzers,
@@ -395,17 +565,15 @@ def main():
     
     # LOG['algorithm'] = algorithm
 
-    # RUNNING = True
+    RUNNING = True
 
     # thread_log = threading.Thread(target=thread_write_log, daemon=True)
     # thread_log.start()
-    
-    
 
     # # Timer to stop all fuzzers
-    # logger.info(f'main 038 - algorithm : {algorithm}, scheduler: {scheduler}')
+    logger.info(f'main 007 - algorithm : {algorithm}, scheduler: {scheduler}')
 
-    # scheduler.run()
+    scheduler.run()
 
     # finish_path = os.path.join(OUTPUT, 'finish')
     # pathlib.Path(finish_path).touch(mode=0o666, exist_ok=True)
@@ -415,9 +583,9 @@ def main():
 
     # LOG['end_time'] = time.time()
 
-    # write_log()
-    # logger.info(f'main 999 - end program')
-    # cleanup(0)
+    write_log()
+    logger.info(f'main 999 - end program')
+    cleanup(0)
 
 
 if __name__ == '__main__':
