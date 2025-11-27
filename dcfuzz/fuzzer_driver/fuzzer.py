@@ -56,13 +56,13 @@ class PSFuzzer(Fuzzer):
         proc = None
         logger.info(f'fuzzer_driver fuzzer 001 - pid : {self.pid}')
         if not self.pid:
-            # print('self.pid not exist')
+            logger.info(f'fuzzer_driver fuzzer 666_2 - {self.pid} not exist')
             return None
         logger.info(f'fuzzer_driver fuzzer 001.5 - pid_exists={psutil.pid_exists(self.pid)}')
         if psutil.pid_exists(self.pid):
             proc = psutil.Process(pid=self.pid)
         else:
-            # print(f'psutil pid not exist {self.pid}')
+            logger.info(f'fuzzer_driver fuzzer 666_2 - psutil pid not exist {self.pid}')
             return None
         logger.info(f'fuzzer_driver fuzzer 002 - proc : {proc}')
         return proc
@@ -88,6 +88,9 @@ class PSFuzzer(Fuzzer):
         args = self.gen_run_args()
         cwd = self.gen_cwd()
         env = {**os.environ, **self.gen_env()}
+
+        log_path = os.path.join(self.output, "fuzzer_std.log")
+        log_file = open(log_path, "w")
         if IS_DEBUG:
             # print(env)
             print(" ".join(args))
@@ -105,13 +108,14 @@ class PSFuzzer(Fuzzer):
                                     env=env,
                                     cwd=cwd,
                                     stdin=subprocess.DEVNULL,
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL)
-        # 여기서 subprocess.Popen() 하면서 dafl 의 pid 생성이 됨.   
+                                    stdout=log_file,
+                                    stderr=log_file,
+                                    bufsize =0)
+        # 여기서 subprocess.Popen() 하면서 pid 생성이 됨.   
         assert proc
         self.__proc = proc
         self.__pid = proc.pid
-        logger.info(f'fuzzer_driver fuzzer 666 - proc : {proc}, pid : {self.pid}, args : {args}, cwd : {cwd}')
+        logger.info(f'fuzzer_driver fuzzer 666 - proc : {proc}, pid : {proc.pid}, args : {args}, cwd : {cwd}')
 
     def start(self):
         if self.proc:

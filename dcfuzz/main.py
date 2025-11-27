@@ -253,42 +253,44 @@ def init():
     pathlib.Path(health_check_path).touch(mode=0o666, exist_ok=True)
     LOG['log'] = []
     LOG['round'] = []
-    logger.info(f'main 004.5 - init end')
+    logger.info(f'main 002.5- init end')
 
 # we create init_cgroup
 
 def init_cgroup():
+    logger.info(f'main 200 - cgroup init start')
+
     '''
     cgroup /dcfuzz is created by /init.sh, the command is the following:
-
     cgcreate -t yufu -a yufu -g cpu:/dcfuzz
     '''
+
     global FUZZERS, CGROUP_ROOT
     # start with /
     cgroup_path = cgroup_utils.get_cgroup_path()
     container_id = os.path.basename(cgroup_path)
     cgroup_path_fs = os.path.join('/sys/fs/cgroup/cpu', cgroup_path[1:])
     dcfuzz_cgroup_path_fs = os.path.join(cgroup_path_fs, 'dcfuzz')
-    # print(dcfuzz_cgroup_path_fs)
-    if not os.path.exists(dcfuzz_cg1oup_path_fs):
+
+    if not os.path.exists(dcfuzz_cgroup_path_fs):
         logger.critical(
             'dcfuzz cgroup not exists. make sure to run /init.sh first')
         terminate_dcfuzz()
+
     t = trees.Tree()
     p = os.path.join('/cpu', cgroup_path[1:], 'dcfuzz')
     CGROUP_ROOT = os.path.join(cgroup_path, 'dcfuzz')
-    # print('CGROUP_ROOT', CGROUP_ROOT)
     cpu_node = t.get_node_by_path(p)
+    
     for fuzzer in FUZZERS:
         fuzzer_cpu_node = t.get_node_by_path(os.path.join(p, fuzzer))
         if not fuzzer_cpu_node:
             fuzzer_cpu_node = cpu_node.create_cgroup(fuzzer)
         cfs_period_us = fuzzer_cpu_node.controller.cfs_period_us
-        # default to JOBS / num_of_fuzzers
-        # defaut to full
-        quota = int(cfs_period_us * (JOBS))
-        # print(fuzzer_cpu_node, quota)
+        quota = int(cfs_period_us * (1))
         fuzzer_cpu_node.controller.cfs_quota_us = quota
+
+    logger.info(f'main 201 - cgroup init end')
     return True
 
 

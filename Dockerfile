@@ -27,7 +27,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential cmake git curl wget unzip \
+    build-essential cmake git curl wget unzip tree  \
     autoconf automake libtool bison flex \
     zlib1g-dev libssl-dev python3 python3-pip \
     clang-format clang-tidy \

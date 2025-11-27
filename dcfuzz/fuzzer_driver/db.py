@@ -15,7 +15,7 @@ class AFLGoModel(BaseModel):
     argument = peewee.CharField()
     pid = peewee.IntegerField()
 
-class WindrangerModel(BaseModel):
+class WindRangerModel(BaseModel):
     seed = peewee.CharField()
     output = peewee.CharField()
     group = peewee.CharField()

@@ -165,7 +165,6 @@ class DAFLController(Controller):
         logger.info("DAFLModel db bound = %r", DAFLModel._meta.database)
         
         for fuzzer in DAFLModel.select():
-            logger.info(f'dafl controller 001_2 - DAFLModel selected')
             dafl = DAFL(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
             logger.info(f'dafl controller 002 - dafl : {dafl}')
             self.dafls.append(dafl)

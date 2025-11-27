@@ -3,13 +3,14 @@ import pathlib
 import sys
 import time
 import logging
+import shutil
 
 import peewee
 import psutil
 
 from dcfuzz import config as Config
 from .controller import Controller
-from .db import WindrangerModel, ControllerModel, db_proxy
+from .db import WindRangerModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
 logger = logging.getLogger('dcfuzz.fuzzer_driver.windranger')
@@ -130,7 +131,7 @@ class Windranger(WindrangerBase):
         args += ['--', self.target]
         args += self.argument.split(' ')
         logger.info(f'windranger class 100 - arg : {args}')
-        return args
+        return args    
 
 class WINDRANGERController(Controller):
     def __init__(self, seed, output, group, program, argument,  cgroup_path=''):
@@ -157,15 +158,17 @@ class WINDRANGERController(Controller):
         logger.info(f'windranger controller 001 - init windranger driver')
         db_proxy.initialize(self.db)
         self.db.connect()
-        self.db.create_tables([WindrangerModel, ControllerModel])
+        self.db.create_tables([WindRangerModel, ControllerModel])
         # check select model
-        q = WindrangerModel.select()
-        logger.info("WindrangerModel count = %d", q.count())
+        q = WindRangerModel.select()
+        logger.info("WindRangerModel count = %d", q.count())
         logger.info("DB path = %s", self.db.database)
-        logger.info("WindrangerModel db bound = %r", WindrangerModel._meta.database)
+        logger.info("WindRangerModel db bound = %r", WindRangerModel._meta.database)
+
+        # copy distance
+        self.copy_distance()
         
-        for fuzzer in WindrangerModel.select():
-            logger.info(f'windranger controller 001_2 - WindrangerModel selected')
+        for fuzzer in WindRangerModel.select():
             windranger = Windranger(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
             logger.info(f'windranger controller 002 - windranger : {windranger}')
             self.windrangers.append(windranger)
@@ -177,7 +180,8 @@ class WINDRANGERController(Controller):
             return
         windranger = Windranger(**self.kwargs)
         windranger.start()
-        WindrangerModel.create(**self.kwargs, pid=windranger.pid)
+        logger.info(f'windranger controller 003.25 - pid : {windranger.pid}')
+        WindRangerModel.create(**self.kwargs, pid=windranger.pid)
         ControllerModel.create(scale_num=1)
         ready_path = os.path.join(self.output, 'ready')
         pathlib.Path(ready_path).touch(mode=0o666, exist_ok=True)
@@ -204,6 +208,28 @@ class WINDRANGERController(Controller):
         logger.info(f'windranger controller 006 - stop windranger driver')
         for windranger in self.windrangers:
             windranger.stop()
-        self.db.drop_tables([WindrangerModel, ControllerModel])
+        self.db.drop_tables([WindRangerModel, ControllerModel])
+
+    def copy_distance(self):
+        logger.info(f'windranger class 002 - copy distance')
+        program_name = self.program
+        target_root = FUZZER_CONFIG['windranger']['target_root']
+
+        src_distance = os.path.join(target_root, f"{program_name}-distance.txt")
+        src_targets = os.path.join(target_root, f"{program_name}-targets.txt")
+        src_condition = os.path.join(target_root, f"{program_name}-condition_info.txt")
+
+        dst_distance = os.path.join(target_root, "distance.txt")
+        dst_targets = os.path.join(target_root, "targets.txt")
+        dst_condition = os.path.join(target_root, "condition_info.txt")
+
+        if not os.path.exists(dst_distance):
+            shutil.copy(src_distance, dst_distance)
+
+        if not os.path.exists(dst_targets):
+            shutil.copy(src_targets, dst_targets)
+
+        if not os.path.exists(dst_condition):
+            shutil.copy(src_condition, dst_condition)
 
 

@@ -170,7 +170,6 @@ class AFLGOController(Controller):
         logger.info("AFLGoModel db bound = %r", AFLGoModel._meta.database)
         
         for fuzzer in AFLGoModel.select():
-            logger.info(f'aflgo controller 001_2 - AFLGoModel selected')
             aflgo = AFLGo(seed=fuzzer.seed, output=fuzzer.output, group=fuzzer.group, program=fuzzer.program, argument=fuzzer.argument, cgroup_path=self.cgroup_path, pid=fuzzer.pid)
             logger.info(f'aflgo controller 002 - aflgo : {aflgo}')
             self.aflgos.append(aflgo)
