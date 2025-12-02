@@ -61,7 +61,7 @@ class PSFuzzer(Fuzzer):
             proc = psutil.Process(pid=self.pid)
         else:
             return None
-        logger.info(f'fuzzer_driver fuzzer 001 - pid : {self.pid}, pid_exists={psutil.pid_exists(self.pid)}')
+        #logger.info(f'fuzzer_driver fuzzer 001 - pid : {self.pid}, pid_exists={psutil.pid_exists(self.pid)}')
         return proc
 
     @abstractmethod

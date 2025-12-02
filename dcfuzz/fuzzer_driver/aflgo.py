@@ -12,7 +12,7 @@ from .controller import Controller
 from .db import AFLGoModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
-logger = logging.getLogger('dcfuzz.fuzzer_driver.aflgo')
+#logger = logging.getLogger('dcfuzz.fuzzer_driver.aflgo')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -134,7 +134,7 @@ class AFLGo(AFLGoBase):
         args += ['-c', '20h']
         args += ['--', self.target]
         args += self.argument.split(' ')
-        logger.info(f'aflgo class 100 - arg : {args}')
+        # logger.info(f'aflgo class 100 - arg : {args}')
         return args
 
 class AFLGOController(Controller):
@@ -159,7 +159,7 @@ class AFLGOController(Controller):
         }
 
     def init(self):
-        logger.info(f'aflgo controller 001 - init aflgo driver')
+        # logger.info(f'aflgo controller 001 - init aflgo driver')
         db_proxy.initialize(self.db)
         self.db.connect()
         self.db.create_tables([AFLGoModel, ControllerModel])
@@ -176,7 +176,7 @@ class AFLGOController(Controller):
 
 
     def start(self):
-        logger.info(f'aflgo controller 003 - start aflgo driver')
+        # logger.info(f'aflgo controller 003 - start aflgo driver')
         if self.aflgos:
             print('already started', file=sys.stderr)
             return
@@ -191,12 +191,12 @@ class AFLGOController(Controller):
         pass
 
     def pause(self):
-        logger.info(f'aflgo controller 004 - pause aflgo driver')
+        # logger.info(f'aflgo controller 004 - pause aflgo driver')
         for aflgo in self.aflgos:
             aflgo.pause()
 
     def resume(self):
-        logger.info(f'aflgo controller 005 - resume aflgo driver')
+        # logger.info(f'aflgo controller 005 - resume aflgo driver')
         '''
         NOTE: prserve scaling
         '''
@@ -205,7 +205,7 @@ class AFLGOController(Controller):
             aflgo.resume()
 
     def stop(self):
-        logger.info(f'aflgo controller 006 - stop aflgo driver')
+        # logger.info(f'aflgo controller 006 - stop aflgo driver')
         for aflgo in self.aflgos:
             aflgo.stop()
         self.db.drop_tables([AFLGoModel, ControllerModel])

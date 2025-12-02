@@ -64,7 +64,7 @@ def main(fuzzer,
     if controller_class is None:
         print(f"{fuzzer} controller doesn't exist.")
 
-    logger.info(f'fuzzer_driver 001 - controller_class : {controller_class}')
+    #logger.info(f'fuzzer_driver 001 - controller_class : {controller_class}')
 
     controller = controller_class(seed=os.path.realpath(seed),
                                   output=os.path.realpath(output),
@@ -76,7 +76,7 @@ def main(fuzzer,
     controller.init()
     command = command
     
-    logger.info(f'fuzzer_driver 002 - command : {command}')
+    #logger.info(f'fuzzer_driver 002 - command : {command}')
 
     if command == 'start':
         controller.start()

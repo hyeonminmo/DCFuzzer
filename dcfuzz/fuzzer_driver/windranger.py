@@ -13,7 +13,7 @@ from .controller import Controller
 from .db import WindRangerModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
-logger = logging.getLogger('dcfuzz.fuzzer_driver.windranger')
+# logger = logging.getLogger('dcfuzz.fuzzer_driver.windranger')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -130,7 +130,7 @@ class Windranger(WindrangerBase):
         args += ['-d']
         args += ['--', self.target]
         args += self.argument.split(' ')
-        logger.info(f'windranger class 100 - arg : {args}')
+        # logger.info(f'windranger class 100 - arg : {args}')
         return args    
 
 class WINDRANGERController(Controller):
@@ -155,7 +155,7 @@ class WINDRANGERController(Controller):
         }
 
     def init(self):
-        logger.info(f'windranger controller 001 - init windranger driver')
+        # logger.info(f'windranger controller 001 - init windranger driver')
         db_proxy.initialize(self.db)
         self.db.connect()
         self.db.create_tables([WindRangerModel, ControllerModel])
@@ -174,7 +174,7 @@ class WINDRANGERController(Controller):
             self.windrangers.append(windranger)
             
     def start(self):
-        logger.info(f'windranger controller 003 - start windranger driver')
+        # logger.info(f'windranger controller 003 - start windranger driver')
         if self.windrangers:
             print('already started', file=sys.stderr)
             return
@@ -189,12 +189,12 @@ class WINDRANGERController(Controller):
         pass
 
     def pause(self):
-        logger.info(f'windranger controller 004 - pause windranger driver')
+        # logger.info(f'windranger controller 004 - pause windranger driver')
         for windranger in self.windrangers:
             windranger.pause()
 
     def resume(self):
-        logger.info(f'windranger controller 005 - resume windranger driver')
+        # logger.info(f'windranger controller 005 - resume windranger driver')
         '''
         NOTE: prserve scaling
         '''
@@ -203,13 +203,13 @@ class WINDRANGERController(Controller):
             windranger.resume()
 
     def stop(self):
-        logger.info(f'windranger controller 006 - stop windranger driver')
+        # logger.info(f'windranger controller 006 - stop windranger driver')
         for windranger in self.windrangers:
             windranger.stop()
         self.db.drop_tables([WindRangerModel, ControllerModel])
 
     def copy_distance(self):
-        logger.info(f'windranger controller 666 - copy distance')
+        # logger.info(f'windranger controller 666 - copy distance')
         program_name = self.program
         target_root = FUZZER_CONFIG['windranger']['target_root']
 
