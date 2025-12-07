@@ -22,8 +22,8 @@ from cgroupspy import trees
 
 from . import cgroup_utils, cli
 from . import config as Config
-from . import fuzzer_driver #, sync , fuzzing
-from .common import nested_dict
+from . import fuzzer_driver, sync #, fuzzing
+from .common import nested_dict, IS_PROFILE, IS_DEBUG
 from .singleton import SingletonABCMeta
 
 # set log file
@@ -70,7 +70,7 @@ def is_end():
     current_time = time.time()
     elasp = current_time - START_TIME
     timeout_seconds = TIMEOUT
-    logger.info(f'main 900 - elasp : {elasp}, timeout_seconds :{timeout_seconds}, current_time : {current_time}, START_TIME : {START_TIME} ')
+    # logger.info(f'main 900 - elasp : {elasp}, timeout_seconds :{timeout_seconds}, current_time : {current_time}, START_TIME : {START_TIME} ')
     return elasp >= timeout_seconds + diff
 
 
@@ -137,7 +137,7 @@ def gen_fuzzer_driver_args(fuzzer: str,
 def start(fuzzer: str, output_dir, timeout, input_dir=None):
     global FUZZERS,ARGS
 
-    logger.info(f'main 100 - start function {fuzzer} ')
+    # logger.info(f'main 100 - start function {fuzzer} ')
 
     fuzzer_config = config['fuzzer'][fuzzer]
     create_output_dir = fuzzer_config.get('create_output_dir',True)
@@ -158,7 +158,7 @@ def start(fuzzer: str, output_dir, timeout, input_dir=None):
 
     kw['command'] = 'start'
 
-    logger.info(f'main 102 - start func kw : {kw}')
+    # logger.info(f'main 102 - start func kw : {kw}')
 
     fuzzer_driver.main(**kw)
 
@@ -166,13 +166,13 @@ def pause(fuzzer, jobs=1, input_dir=None):
     '''
     call Fuzzer API to pause fuzzer
     '''
-    logger.info(f'main 103 - pause function {fuzzer}')
+    # logger.info(f'main 103 - pause function {fuzzer}')
 
     kw = gen_fuzzer_driver_args(fuzzer=fuzzer, input_dir=input_dir)
 
     kw['command'] = 'pause'
 
-    logger.info(f'main 104 - pause func kw : {kw}')
+    # logger.info(f'main 104 - pause func kw : {kw}')
 
     fuzzer_driver.main(**kw)
 
@@ -180,13 +180,13 @@ def resume(fuzzer, jobs=1, input_dir=None):
     '''
     call Fuzzer API to resume fuzzer
     '''
-    logger.info(f'main 105 - resume function {fuzzer}')
+    # logger.info(f'main 105 - resume function {fuzzer}')
     
     kw = gen_fuzzer_driver_args(fuzzer=fuzzer, jobs=1, input_dir=input_dir)
 
     kw['command'] = 'resume'
 
-    logger.info(f'main 106 - resume func kw : {kw}')
+    # logger.info(f'main 106 - resume func kw : {kw}')
 
     fuzzer_driver.main(**kw)
 
@@ -194,31 +194,31 @@ def stop(fuzzer, jobs=1, input_dir=None):
     '''
     call Fuzzer API to stop fuzzer
     '''
-    logger.info(f'main 107 - stop function {fuzzer}')
+    # logger.info(f'main 107 - stop function {fuzzer}')
     
     kw = gen_fuzzer_driver_args(fuzzer=fuzzer,jobs=1, input_dir=input_dir)
 
     kw['command'] = 'stop'
 
-    logger.info(f'main 108 - stop func kw : {kw}')
+    # logger.info(f'main 108 - stop func kw : {kw}')
 
     fuzzer_driver.main(**kw)
 
 
 # sync the seed and remove depulicated seed 
-# def do_sync(fuzzers: List[str], host_root_dir: Path) -> bool:
-#     logger.info('main 109 - start seed sync')
-#     #fuzzer_info = maybe_get_fuzzer_info(fuzzers)
-#     #if not fuzzer_info:
-#     #    return False
-#     start_time = time.time()
-#     logger.info(f'main 110 - TARGET : {TARGET}, fuzzers : {fuzzers}, ')
-#     sync.sync2(TARGET, fuzzers, host_root_dir)
-#     end_time = time.time()
-#     diff = end_time - start_time
-#     if IS_PROFILE: logger.info(f'main 110 - sync take {diff} seconds')
-#     #coverage.sync()
-#     return True
+def do_sync(fuzzers: List[str], host_root_dir: Path) -> bool:
+    logger.info('main 109 - start seed sync')
+    #fuzzer_info = maybe_get_fuzzer_info(fuzzers)
+    #if not fuzzer_info:
+    #    return False
+    start_time = time.time()
+    logger.info(f'main 110 - TARGET : {TARGET}, fuzzers : {fuzzers}, host_root_dir : {host_root_dir}')
+    sync.sync2(TARGET, fuzzers, host_root_dir)
+    end_time = time.time()
+    diff = end_time - start_time
+    if IS_PROFILE: logger.info(f'main 110 - sync take {diff} seconds')
+    #coverage.sync()
+    return True
 
 def set_fuzzer_cgroup(fuzzer, new_cpu):
     global CGROUPR_ROOT
@@ -241,7 +241,7 @@ def update_fuzzer_limit(fuzzer, new_cpu):
     if math.isclose(CPU_ASSIGN[fuzzer], new_cpu):
         return
     is_pause = math.isclose(0, new_cpu)
-    logger.info(f'main 401 - is_pause : {is_pause}')
+    # logger.info(f'main 401 - is_pause : {is_pause}')
 
     if is_pause:        
         # print('update pause')
@@ -249,7 +249,7 @@ def update_fuzzer_limit(fuzzer, new_cpu):
 
     # previous 0
     if math.isclose(CPU_ASSIGN[fuzzer], 0) and new_cpu != 0:
-        logger.info(f'main 401.5 - resumestart')
+        # logger.info(f'main 401.5 - resume start')
         resume(fuzzer=fuzzer, jobs=1, input_dir=ARGS.input)  
 
     CPU_ASSIGN[fuzzer] = new_cpu
@@ -260,7 +260,7 @@ def update_fuzzer_limit(fuzzer, new_cpu):
     else:
         # give 1%
         set_fuzzer_cgroup(fuzzer, 0.01)
-    logger.info('main 402 - update fuzzer limit end')
+    # logger.info('main 402 - update fuzzer limit end')
 
 # # crash mode and empty_seed 는 필요 없음.
 # # distance 구하는 이미지가 필요함.
@@ -400,9 +400,7 @@ class Schedule_Base(SchedulingAlgorithm):
         for fuzzer in self.fuzzers:
             new_cpu = 1 if fuzzer == run_fuzzer else 0
             update_fuzzer_limit(fuzzer, new_cpu)
-        logger.debug(f'focus one: {run_fuzzer}')
-
-
+        logger.debug(f'single one: {run_fuzzer}')
 
     def pre_round(self):
         pass
@@ -505,15 +503,17 @@ class Schedule_DCFuzz(Schedule_Base):
         round_start_time = time.time()
 
         global OUTPUT
-
         logger.info(f'main 500 - start preparation phase')
         
-        # set prep
+        # set prep variable
         prep_fuzzers = self.fuzzers       
         prep_time = self.prep_time
         remain_time = prep_time
-
         prep_round = 1
+
+        do_sync(self.fuzzers, OUTPUT)
+
+        logger.info(f'main 501 - sync end')
         
         while remain_time > 0 :
             run_time = min(remain_time,30)
@@ -524,10 +524,8 @@ class Schedule_DCFuzz(Schedule_Base):
                 sleep(run_time)
 
             remain_time -= run_time
-
             prep_round +=1
-
-            logger.info(f'main 502 - Preparation round {prep_round} - prep_fuzzer : {prep_fuzzer}, run time : {run_time}, remain_time')
+            do_sync(self.fuzzers, OUTPUT)
         
         
         #do_sync(self.fuzzers, OUTPUT)
