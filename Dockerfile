@@ -4,7 +4,7 @@ FROM fuzzer_base3/dafl AS dafl
 
 FROM dcfuzz_bench/aflgo AS bench_aflgo
 FROM dcfuzz_bench2/windranger AS bench_windranger
-FROM dcfuzz_bench/dafl AS bench_dafl
+FROM dcfuzz_bench2/dafl AS bench_dafl
 FROM dcfuzz_bench/asan AS bench_asan
 #FROM dcfuzz_bench/patch AS bench_patch
 
