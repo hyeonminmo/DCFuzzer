@@ -264,6 +264,33 @@ CONFIG: Dict = {
                 'default': '@@',
             }
         },
+        'swftophp-2018-7868': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2018-8807',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2018-8807': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2018-8807',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2018-8962': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2018-8807',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
         'swftophp-2019-12982': {
             'group': 'swftophp',
             'seed': '/benchmark/seed/swftophp-2019-12982',
@@ -276,6 +303,15 @@ CONFIG: Dict = {
         'swftophp-2019-9114': {
             'group': 'swftophp',
             'seed': '/benchmark/seed/swftophp-2019-9114',
+            #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
+            #'dict': 'jpeg.dict',
+            'args': {
+                'default': '@@',
+            }
+        },
+        'swftophp-2020-6628': {
+            'group': 'swftophp',
+            'seed': '/benchmark/seed/swftophp-2020-6628',
             #'code_dir': 'unibench/gdk-pixbuf-2.31.1',
             #'dict': 'jpeg.dict',
             'args': {
