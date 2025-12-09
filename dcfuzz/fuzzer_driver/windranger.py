@@ -110,7 +110,8 @@ class WindrangerBase(PSFuzzer):
         args += ['-m', 'none']
         args += ['-d']
         args += ['--', self.target]
-        args += self.argument.split(' ')
+        if not self.argument == '':
+            args += self.argument.split(' ')
         return args
 
 
@@ -129,7 +130,8 @@ class Windranger(WindrangerBase):
         args += ['-m', 'none']
         args += ['-d']
         args += ['--', self.target]
-        args += self.argument.split(' ')
+        if not self.argument == '':
+            args += self.argument.split(' ')
         # logger.info(f'windranger class 100 - arg : {args}')
         return args    
 

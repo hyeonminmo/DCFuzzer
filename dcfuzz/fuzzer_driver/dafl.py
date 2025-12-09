@@ -109,7 +109,8 @@ class DAFLBase(PSFuzzer):
         args += ['-m', 'none']
         args += ['-d']
         args += ['--', self.target]
-        args += self.argument.split(' ')
+        if not self.argument == '':
+            args += self.argument.split(' ')
         return args
 
 
@@ -128,7 +129,8 @@ class DAFL(DAFLBase):
         args += ['-m', 'none']
         args += ['-d']
         args += ['--', self.target]
-        args += self.argument.split(' ')
+        if not self.argument == '':
+            args += self.argument.split(' ')
         # logger.info(f'dafl class 100 - arg : {args}')
         return args
 

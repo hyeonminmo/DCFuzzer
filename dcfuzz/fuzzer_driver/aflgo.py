@@ -12,7 +12,7 @@ from .controller import Controller
 from .db import AFLGoModel, ControllerModel, db_proxy
 from .fuzzer import PSFuzzer, FuzzerDriverException
 
-#logger = logging.getLogger('dcfuzz.fuzzer_driver.aflgo')
+logger = logging.getLogger('dcfuzz.fuzzer_driver.aflgo')
 
 CONFIG = Config.CONFIG
 FUZZER_CONFIG = CONFIG['fuzzer']
@@ -97,21 +97,21 @@ class AFLGoBase(PSFuzzer):
         ret &= os.path.exists(self.target)
         if not ret:
             raise FuzzerDriverException
-
+    
     def gen_run_args(self):
         self.check()
-
         args = []
         if self.cgroup_path:
             args += ['cgexec', '-g', f'cpu:{self.cgroup_path}']
-
         args += [self.aflgo_command, '-i', self.seed, '-o', self.output]
         args += ['-m', 'none']
         args += ['-d']
         args += ['-z', 'exp']
         args += ['-c', '20h']
         args += ['--', self.target]
-        args += self.argument.split(' ')
+        if not self.argument == '':
+            args += self.argument.split(' ')
+        logger.info(f'aflgo class 100 - arg : {args}')
         return args
 
 
@@ -133,8 +133,9 @@ class AFLGo(AFLGoBase):
         args += ['-z', 'exp']
         args += ['-c', '20h']
         args += ['--', self.target]
-        args += self.argument.split(' ')
-        # logger.info(f'aflgo class 100 - arg : {args}')
+        if not self.argument == '':
+            args += self.argument.split(' ')
+        logger.info(f'aflgo class 100 - arg : {args}')
         return args
 
 class AFLGOController(Controller):
