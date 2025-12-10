@@ -117,7 +117,7 @@ def gen_fuzzer_driver_args(fuzzer: str,
     group = target_config['group']
     target_args = target_config['args'].get(fuzzer, target_config['args']['default'])
 
-    logging.info(f'main 200- target_args : {target_args}')
+    # logging.info(f'main 200- target_args : {target_args}')
 
     root_dir = os.path.realpath(ARGS.output)
     output = os.path.join(root_dir, TARGET, fuzzer)
@@ -132,6 +132,7 @@ def gen_fuzzer_driver_args(fuzzer: str,
         'thread': jobs,
         'cgroup_path': cgroup_path
     }
+    logging.info(f'main 1001 - kw : {kw}')
     return kw
 
 def start(fuzzer: str, output_dir, timeout, input_dir=None):
@@ -260,10 +261,7 @@ def update_fuzzer_limit(fuzzer, new_cpu):
     else:
         # give 1%
         set_fuzzer_cgroup(fuzzer, 0.01)
-    # logger.info('main 402 - update fuzzer limit end')
-
-# # crash mode and empty_seed 는 필요 없음.
-# # distance 구하는 이미지가 필요함.
+    logger.info('main 402 - update fuzzer limit end')
 
 def cleanup(exit_code=0):
     global ARGS
@@ -276,11 +274,9 @@ def cleanup(exit_code=0):
     #    save_tar()
     os._exit(exit_code)
 
-
 def cleanup_exception(etype, value, tb):
     #traceback.print_exception(etype, value, tb)
     cleanup(1)
-
 
 def write_log():
     global LOG, RUNNING
@@ -292,7 +288,6 @@ def write_log():
             f.write(json.dumps(LOG, default=json_dumper))
     else:
         assert False, 'update_log error'
-
 
 def init():
     global START_TIME, LOG
@@ -428,7 +423,6 @@ class Schedule_Base(SchedulingAlgorithm):
         logger.info(f"main 920 - {self.name}: post_run")
 
 
-
 class Schedule_Single(Schedule_Base):
     def __init__(self, fuzzers, single):
         self.fuzzers = fuzzers
@@ -497,7 +491,6 @@ class Schedule_DCFuzz(Schedule_Base):
         #self.diff_threshold = diff_threshold
         #self.focused_round = []
         #self.picked_times = {}        
-    
     
     def prep(self):
         round_start_time = time.time()
@@ -688,6 +681,8 @@ def main():
     logger.info(f'main 007 - algorithm : {algorithm}, scheduler: {scheduler}')
 
     scheduler.run()
+
+    logger.info(f'main 008 - scheduler run end')
 
     # finish_path = os.path.join(OUTPUT, 'finish')
     # pathlib.Path(finish_path).touch(mode=0o666, exist_ok=True)
