@@ -337,6 +337,23 @@ def init_cgroup():
     logger.info(f'main 201 - cgroup init end')
     return True
 
+# score 폴더 생성 
+def init_evaluate(output_dir):
+    global ARGS
+    fuzzer_config = config['score']
+    host_output_dir = f'{output_dir}/{ARGS.target}/score'
+    if os.path.exists(f'{output_dir}/{ARGS.target}/score'):
+        logger.error(f'Please remove {output_dir}/{ARGS.target}/score')
+        terminate_dcfuzz()
+    os.makedirs(host_output_dir, exist_ok=True)
+
+
+
+
+
+
+
+
 
 class SchedulingAlgorithm(metaclass=SingletonABCMeta):
     @abstractmethod
