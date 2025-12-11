@@ -26,7 +26,7 @@ def gen_run_args(seed, output, program):
 
     target_config = CONFIG['target'][program]
     target_args = target_config['args']['default']
-    logger.info(f"evaluator 101 - command : {command},  target_args : {target_args}, target_root : {target_root}")
+    # logger.info(f"evaluator 101 - command : {command},  target_args : {target_args}, target_root : {target_root}")
 
     args += [command, '-i', seed, '-o', output]
     args += ['-m', 'none']
@@ -84,17 +84,15 @@ def cleanup(score_dir, score_file):
         elif os.path.isdir(path):
             shutil.rmtree(path)
 
-# max_score
-
 def extract_score(fuzzer, seed, output_dir, program):
-    logger.info(f'evaluator 001 - fuzzer : {fuzzer}, seed : {seed}, output_dir : {output_dir}, program : {program}')
+    # logger.info(f'evaluator 001 - fuzzer : {fuzzer}, seed : {seed}, output_dir : {output_dir}, program : {program}')
     # example - fuzzer : aflgo, seed : /home/dcfuzz/output/swftophp-2016-9827/aflgo/queue, output_dir : /home/dcfuzz/output/swftophp-2016-9827/score, program : swftophp-2016-9827
     seed_path = os.path.realpath(seed)
     output_path = os.path.realpath(output_dir)
     base_dir = "/home/dcfuzz"
 
     args = gen_run_args(seed=seed_path, output=output_path, program=program)
-    logger.info(f'evaluator 002 - args : {args}')
+    # logger.info(f'evaluator 002 - args : {args}')
     
     result = subprocess.run(args,
                             stdin=subprocess.DEVNULL,

@@ -18,11 +18,12 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional
 from cgroupspy import trees
+from collections import defaultdict
 
 
 from . import cgroup_utils, cli
 from . import config as Config
-from . import fuzzer_driver, sync, evaluator #, fuzzing
+from . import fuzzer_driver, sync, evaluator, thompson #, fuzzing
 from .common import nested_dict, IS_PROFILE, IS_DEBUG
 from .singleton import SingletonABCMeta
 
@@ -262,7 +263,7 @@ def update_fuzzer_limit(fuzzer, new_cpu):
     else:
         # give 1%
         set_fuzzer_cgroup(fuzzer, 0.01)
-    logger.info('main 402 - update fuzzer limit end')
+    # logger.info('main 402 - update fuzzer limit end')
 
 def cleanup(exit_code=0):
     global ARGS
@@ -360,12 +361,13 @@ def evaluate_score(fuzzer : str):  #, executionTime):
     fuzzer_dir = f'{OUTPUT}/{TARGET}/{fuzzer}/queue'
     max_score = evaluator.extract_score(fuzzer=fuzzer, seed=fuzzer_dir, output_dir=EVALUTOR_DIR, program=TARGET)
     logger.info(f'main 9999 - {fuzzer} results : {max_score}')
-    #return results
+    return max_score
+
 
 
 class SchedulingAlgorithm(metaclass=SingletonABCMeta):
     @abstractmethod
-    def __init__(self, fuzzers, focus=None, one_core=False, N=1):
+    def __init__(self, fuzzers, dcFuzzers, focus=None, one_core=False, N=1):
         pass
 
     @abstractmethod
@@ -375,11 +377,12 @@ class SchedulingAlgorithm(metaclass=SingletonABCMeta):
 class Schedule_Base(SchedulingAlgorithm):
     def __init__(self,
                  fuzzers: List[str],
+                 dcFuzzers,
                  prep_time: int,
                  focus_time: int,
                  jobs: int = 1):
         self.fuzzers = fuzzers
-        #self.rcFuzzers = rcFuzzers
+        self.dcFuzzers = dcFuzzers
         self.name = 'schedule_base'
 
         # to support multicore
@@ -400,17 +403,6 @@ class Schedule_Base(SchedulingAlgorithm):
         self.focus_time_round = 0
 
         self.sync_time = 0
-
-        # self.cov_before_collection: Coverage
-        # self.cov_before_execution: Coverage
-
-        # self.bitmap_contribution: BitmapContribution = {}
-        # self.all_bitmap_contribution: BitmapContribution = {}  # will not reset
-        # self.round_bitmap_contribution: Deque[BitmapContribution] = deque()
-        # self.round_bitmap_intersection_contribution: Deque[
-        #     BitmapContribution] = deque()
-        # self.round_bitmap_distinct_contribution: Deque[
-        #     BitmapContribution] = deque()
 
         self.picked_times: Dict[Fuzzer, int]
         self.diff_threshold = None
@@ -454,24 +446,6 @@ class Schedule_Single(Schedule_Base):
         self.single = single
         self.name = f'Single_{single}'
 
-    # def pre_round(self):      
-    #     update_success = maybe_get_fuzzer_info(fuzzers=self.fuzzers)
-    #     if not update_success:
-    #         SLEEP = 10
-    #         logger.info(
-    #             f'main 019 - wait for all fuzzer having coverage, sleep {SLEEP} seconds')
-    #         sleep(SLEEP)
-    #         global START_TIME
-    #         elasp = time.time() - START_TIME
-    #         if elasp > 600:
-    #             terminate_rcfuzz()
-    #     return update_success
-
-    # def post_round(self):
-    #     fuzzer_info = get_fuzzer_info(self.fuzzers)
-    #     fuzzer_info = compress_fuzzer_info(self.fuzzers, fuzzer_info)
-    #     append_log('round', {'fuzzer_info': fuzzer_info})
-
     def one_round(self):
         logger.info(f'main 701 - one_round start')
         self.run_one(self.single)
@@ -502,20 +476,18 @@ class Schedule_Single(Schedule_Base):
 
 # multi fuzzer 실행하기
 class Schedule_DCFuzz(Schedule_Base):
-    def __init__(self, fuzzers, prep_time=600, focus_time=600):
-        super().__init__(fuzzers=fuzzers, prep_time=prep_time, focus_time=focus_time)
-        self.name = f'RCFuzzer_{prep_time}_{focus_time}'        
-
-        # 평가 정책이 어떻게 되는지 
-        # thompson Sampling 은 어떻게 되는지
-        # 정보를 어떻게 저장하고 비교할 것인지
+    def __init__(self, fuzzers, dcFuzzers, prep_time=600, focus_time=600):
+        super().__init__(fuzzers=fuzzers, dcFuzzers=dcFuzzers, prep_time=prep_time, focus_time=focus_time)
+        self.name = f'RCFuzzer_{prep_time}_{focus_time}' 
+        self.round = 1      
 
         #self.find_new_round = False
         #self.policy_bitmap = policy.BitmapPolicy()
         #self.before_collection_fuzzer_info = empty_fuzzer_info(self.fuzzers)
         #self.diff_threshold = diff_threshold
         #self.focused_round = []
-        #self.picked_times = {}        
+        #self.picked_times = {}
+            
     
     def prep(self):
         round_start_time = time.time()
@@ -528,6 +500,7 @@ class Schedule_DCFuzz(Schedule_Base):
         prep_time = self.prep_time
         remain_time = prep_time
         prep_round = 1
+        perform = defaultdict(list)
 
         do_sync(self.fuzzers, OUTPUT)
 
@@ -540,55 +513,65 @@ class Schedule_DCFuzz(Schedule_Base):
                 logger.info(f'main 502 - prep_fuzzer : {prep_fuzzer}, run time : {run_time}')
                 self.run_one(prep_fuzzer)
                 sleep(run_time)
-                evaluate_score(prep_fuzzer)
-
+                score = evaluate_score(prep_fuzzer)
+                perform[prep_fuzzer].append({
+                    'prep_round': prep_round,
+                    'score': score
+                })
+                logger.info(f'main 503 - prep round {prep_round} end - {prep_fuzzer} perform  : {perform[prep_fuzzer]}')
+                
             remain_time -= run_time
             prep_round +=1
             do_sync(self.fuzzers, OUTPUT)
+            
+            for fuzzer in prep_fuzzers:
+                self.dcFuzzers[fuzzer].score = max(entry['score'] for entry in perform[fuzzer])
+                logger.info(f'main 503 - round {self.round} prep phase end - {fuzzer} max score  : {self.dcFuzzers[fuzzer].score}')
                 
+                
+    def focus(self):
+        logger.info(f'main 504 - start focus phase')
+        focus_start_time = time.time()
+        global OUTPUT
+
+        focus_time = self.focus_time
         
+        thompson.rankFuzzer(self.dcFuzzers)
         
-        #do_sync(self.fuzzers, OUTPUT)
-
-        # self.before_collection_fuzzer_info = fuzzer_info
-        # logger.debug(f'before_fuzzer_info: {self.before_collection_fuzzer_info}')
-
-        # collection_fuzzers = self.fuzzers
-        # self.collection_fuzzers = collection_fuzzers
-
-        # previous_bitmap = self.before_collection_fuzzer_info['global_bitmap'].count()
-        # previous_unique_bug = self.before_collection_fuzzer_info['global_unique_bugs']['unique_bugs']
-
-        # logger.info(f'main 900 -  collection start result(whole) - previous_bitmap : {previous_bitmap},  previous_unique_bug : {previous_unique_bug}')
-
-        # self.collection_round_robin()
+        for fuzzer in self.fuzzers:
+            logger.info(f'main 505 - {self.round} round {fuzzer} rank -  success :{self.dcFuzzers[fuzzer].S}, failure :{self.dcFuzzers[fuzzer].F}')
         
-        # collection_end_time = time.time()
-        # after_collection_fuzzer_info = get_fuzzer_info(self.fuzzers)
-
-        # current_bitmap = after_collection_fuzzer_info['global_bitmap'].count()
-        # current_unique_bug = after_collection_fuzzer_info['global_unique_bugs']['unique_bugs']
-
-        # logger.info(f'main 901 - collection end result(whole) - previous_bitmap: {previous_bitmap}, current_bitmap: {current_bitmap}, previous_unique_bug : { previous_unique_bug}, current_unique_bug : { current_unique_bug}')
-
-        # for fuzzer in FUZZERS:
-        #     logger.info(f'main 902 - collection end result(each fuzzer) - fuzzer : { fuzzer }, fuzzer_success : { self.rcFuzzers[fuzzer].S }, fuzzer_fail : { self.rcFuzzers[fuzzer].F }, fuzzer_run_time : {self.rcFuzzers[fuzzer].total_runTime}, fuzzer_branch_difficulty : {self.rcFuzzers[fuzzer].diff}, fuzzer_threshold : {self.rcFuzzers[fuzzer].threshold}')
-    
-
+        selected_fuzzer = thompson.selectFuzzer(self.dcFuzzers)
+        
+        logger.info(f'main 506 -  selected_fuzzer : {selected_fuzzer}')
+        
+        while focus_time > 0: 
+            run_time = min(focus_time,60)
+            self.run_one(selected_fuzzer)
+            sleep(run_time)
+            focus_time -= run_time
+            
+        score = evaluate_score(selected_fuzzer)
+        logger.info(f'main 507 - round {self.round} prep phase end - {selected_fuzzer} max score  : {score}')
+        
+        do_sync(self.fuzzers, OUTPUT)
+        for fuzzer in self.fuzzers:
+            dcFuzzers[fuzzer] = thompson.fuzzer()
+        self.round+=1
 
     def main(self):
-        if is_end():return
-        #if not self.pre_round():return
-        logger.info(f'main 801 - prep phase start')
-        self.prep()
-        logger.info(f'main 802 - prep phase end')
-        # while True:
-        #     if is_end():return
-        #     #if not self.pre_round():continue
-        #     logger.info(f'main 503 - focus phase round {self.round_num} start')
-        #     self.focus()
-        #     logger.info(f'main 504 - focus phase round {self.round_num} end')
-        #     #self.post_round()
+        # if is_end():return
+        # logger.info(f'main 801 - dcfuzz start')
+        # self.focus()
+        # logger.info(f'main 802 - dcfuzz end')
+        while True:
+            if is_end():return
+            #if not self.pre_round():continue
+            logger.info(f'main 801 - focus phase round {self.round} start')
+            self.prep()
+            self.focus()
+            logger.info(f'main 803 - focus phase round {self.round} end')
+            #self.post_round()
         
     def pre_run(self) -> bool:
         logger.info(f"main 810 - {self.name}: pre_run")
@@ -647,11 +630,14 @@ def main():
 
     # setup cgroup
     init_cgroup()
+    
+    dcFuzzers = {}
 
     # setup each fuzzer
     for fuzzer in FUZZERS:
         logger.info(f'main 003 - warm up {fuzzer}')
         CPU_ASSIGN[fuzzer] = 0
+        dcFuzzers[fuzzer] = thompson.fuzzer()
 
         # start each fuzzer in process
         logger.info(f'main 004 - start before')
@@ -678,7 +664,6 @@ def main():
     LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'
     LOG_FILE_NAME = f'{TARGET}_{LOG_DATETIME}.json'
 
-    # 결과들을 캡처하여 저장하는 백그라운드 스레드 영역으로 multi 진행할 때 필요
     # thread_fuzzer_log = threading.Thread(target=thread_update_fuzzer_log, kwargs={'fuzzers': FUZZERS}, daemon=True)
         
     # thread_fuzzer_log.start()
@@ -697,15 +682,12 @@ def main():
         algorithm = FUZZERS[0]
     else: 
         logger.info(f'main 006 - multi_fuzzer : {FUZZERS}, PREP_TIME : {PREP_TIME}, FOCUS_TIME :{FOCUS_TIME} ')
-        scheduler = Schedule_DCFuzz(fuzzers=FUZZERS, prep_time=PREP_TIME, focus_time=FOCUS_TIME)
+        scheduler = Schedule_DCFuzz(fuzzers=FUZZERS, dcFuzzers=dcFuzzers, prep_time=PREP_TIME, focus_time=FOCUS_TIME)
         algorithm = 'dcfuzz'
     
     LOG['algorithm'] = algorithm
 
     RUNNING = True
-
-    # thread_log = threading.Thread(target=thread_write_log, daemon=True)
-    # thread_log.start()
 
     # # Timer to stop all fuzzers
     logger.info(f'main 007 - algorithm : {algorithm}, scheduler: {scheduler}')
@@ -713,12 +695,6 @@ def main():
     scheduler.run()
 
     logger.info(f'main 008 - scheduler run end')
-
-    # finish_path = os.path.join(OUTPUT, 'finish')
-    # pathlib.Path(finish_path).touch(mode=0o666, exist_ok=True)
-    # while not is_end_global():
-    #     logger.info('main 039 - sleep to wait final coverage')
-    #     time.sleep(300)
 
     LOG['end_time'] = time.time()
 
