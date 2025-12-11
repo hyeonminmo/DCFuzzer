@@ -22,7 +22,7 @@ from cgroupspy import trees
 
 from . import cgroup_utils, cli
 from . import config as Config
-from . import fuzzer_driver, sync #, fuzzing
+from . import fuzzer_driver, sync, evaluator #, fuzzing
 from .common import nested_dict, IS_PROFILE, IS_DEBUG
 from .singleton import SingletonABCMeta
 
@@ -38,6 +38,7 @@ LOG = nested_dict()
 START_TIME: float = 0.0
 config: Dict = Config.CONFIG
 OUTPUT: Path
+EVALUTOR_DIR : Path
 INPUT: Optional[Path]
 LOG_DATETIME: str
 LOG_FILE_NAME: str
@@ -136,20 +137,20 @@ def gen_fuzzer_driver_args(fuzzer: str,
     return kw
 
 def start(fuzzer: str, output_dir, timeout, input_dir=None):
-    global FUZZERS,ARGS
+    global FUZZERS,ARGS, TARGET
 
     # logger.info(f'main 100 - start function {fuzzer} ')
 
     fuzzer_config = config['fuzzer'][fuzzer]
     create_output_dir = fuzzer_config.get('create_output_dir',True)
     if create_output_dir:
-        host_output_dir = f'{output_dir}/{ARGS.target}/{fuzzer}'
+        host_output_dir = f'{output_dir}/{TARGET}/{fuzzer}'
         # logger.info(f'main 101 - create_output_dir : {create_output_dir}  host_output_dir : {host_output_dir}')
         os.makedirs(host_output_dir, exist_ok=True)
     else:
-        host_output_dir = f'{output_dir}/{ARGS.target}'
-        if os.path.exists(f'{output_dir}/{ARGS.target}/{fuzzer}'):
-            logger.error(f'Please remove {output_dir}/{ARGS.target}/{fuzzer}')
+        host_output_dir = f'{output_dir}/{TARGET}'
+        if os.path.exists(f'{output_dir}/{TARGET}/{fuzzer}'):
+            logger.error(f'Please remove {output_dir}/{TARGET}/{fuzzer}')
             terminate_dcfuzz()
         os.makedirs(host_output_dir, exist_ok=True)
 
@@ -337,22 +338,29 @@ def init_cgroup():
     logger.info(f'main 201 - cgroup init end')
     return True
 
-# score 폴더 생성 
+# create score folder 
+# input : output directory
+# output : score directory
 def init_evaluate(output_dir):
-    global ARGS
-    fuzzer_config = config['score']
-    host_output_dir = f'{output_dir}/{ARGS.target}/score'
-    if os.path.exists(f'{output_dir}/{ARGS.target}/score'):
-        logger.error(f'Please remove {output_dir}/{ARGS.target}/score')
+    global EVALUTOR_DIR, TARGET
+    logger.info(f'main 202 - evaluate init start {output_dir}')
+    fuzzer_config = config['score_DAFL']
+    host_output_dir = f'{output_dir}/{TARGET}/score'
+    if os.path.exists(f'{output_dir}/{TARGET}/score'):
+        logger.error(f'Please remove {output_dir}/{TARGET}/score')
         terminate_dcfuzz()
     os.makedirs(host_output_dir, exist_ok=True)
+    EVALUTOR_DIR = host_output_dir
+    logger.info(f'main 202 - evaluate init end')
 
 
-
-
-
-
-
+def evaluate_score(fuzzer : str):  #, executionTime):
+    global EVALUTOR_DIR, OUTPUT, TARGET
+    results = {}
+    fuzzer_dir = f'{OUTPUT}/{TARGET}/{fuzzer}/queue'
+    max_score = evaluator.extract_score(fuzzer=fuzzer, seed=fuzzer_dir, output_dir=EVALUTOR_DIR, program=TARGET)
+    logger.info(f'main 9999 - {fuzzer} results : {max_score}')
+    #return results
 
 
 class SchedulingAlgorithm(metaclass=SingletonABCMeta):
@@ -512,7 +520,7 @@ class Schedule_DCFuzz(Schedule_Base):
     def prep(self):
         round_start_time = time.time()
 
-        global OUTPUT
+        global OUTPUT, TARGET
         logger.info(f'main 500 - start preparation phase')
         
         # set prep variable
@@ -532,10 +540,12 @@ class Schedule_DCFuzz(Schedule_Base):
                 logger.info(f'main 502 - prep_fuzzer : {prep_fuzzer}, run time : {run_time}')
                 self.run_one(prep_fuzzer)
                 sleep(run_time)
+                evaluate_score(prep_fuzzer)
 
             remain_time -= run_time
             prep_round +=1
             do_sync(self.fuzzers, OUTPUT)
+                
         
         
         #do_sync(self.fuzzers, OUTPUT)
@@ -660,6 +670,9 @@ def main():
         logger.info(f'main 005 - pause before')
         pause(fuzzer=fuzzer, jobs=1, input_dir=INPUT)
         logger.info(f'main 005.5 - pause after')
+    
+    # setup evaluate
+    init_evaluate(output_dir=OUTPUT)
         
 
     LOG_DATETIME = f'{datetime.datetime.now():%Y-%m-%d-%H-%M-%S}'

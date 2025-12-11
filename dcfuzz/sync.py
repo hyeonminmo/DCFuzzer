@@ -77,7 +77,6 @@ def init_dir(dcfuzz_dir: Path) -> None:
         os.makedirs(d, exist_ok=True)
     logging.info(f'sync 003 - crash_dir : {crash_dir}, hang_dir :{hang_dir}, queue_dir:{queue_dir} XXX')
 
-
 def init(target: str, fuzzers: List[str], host_root_dir: Path) -> None:
     # logging.info(f'sync 002 - start init XXX')
     for fuzzer in fuzzers:
@@ -95,7 +94,6 @@ def new_afl_filename(fuzzer):
     new_index = index[fuzzer]
     index[fuzzer] += 1
     return f'id:{new_index:06d}'
-
 
 def sync_test_case(target, fuzzer, host_root_dir, testcase):
     fuzzer_config = config['fuzzer'][fuzzer]
@@ -130,7 +128,6 @@ def sync2(target: str, fuzzers: List[str], host_root_dir: Path):
     new_test_cases = nested_dict()
 
     # handle seeds
-
     # 1. update global queue
     for fuzzer in fuzzers:
         fuzzer_config = config['fuzzer'][fuzzer]
@@ -164,7 +161,7 @@ def sync2(target: str, fuzzers: List[str], host_root_dir: Path):
                     global_processed_checksum.add(test_case.checksum)
             LAST_INDEX[w] = queue_len
     
-    logging.info(f'sync 006 - update global queue XXX')
+    # logging.info(f'sync 006 - update global queue XXX')
 
     # 2. sync to each fuzzer
     for fuzzer in fuzzers:
@@ -175,7 +172,7 @@ def sync2(target: str, fuzzers: List[str], host_root_dir: Path):
                 # do sync!
                 sync_test_case(target, fuzzer, host_root_dir, test_case)
 
-    logging.info(f'sync 007 - sync each fuzzer XXX')
+    # logging.info(f'sync 007 - sync each fuzzer XXX')
 
     del global_new_test_cases
     del new_test_cases
