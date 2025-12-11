@@ -1,6 +1,7 @@
 FROM fuzzer_base3/aflgo AS aflgo
 FROM fuzzer_base3/windranger AS windranger
 FROM fuzzer_base3/dafl AS dafl
+FROM fuzzer_base3/score AS score
 
 FROM dcfuzz_bench/aflgo AS bench_aflgo
 FROM dcfuzz_bench2/windranger AS bench_windranger
@@ -15,7 +16,6 @@ ARG UID
 ARG GID
 
 SHELL ["/bin/bash", "-c"]
-
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONIOENCODING=utf8 \
@@ -59,6 +59,7 @@ RUN apt update && apt install -y protobuf-compiler cgroup-tools lcov
 COPY --chown=$UID:$GID --from=aflgo /fuzzer /fuzzer
 COPY --chown=$UID:$GID --from=windranger /fuzzer /fuzzer
 COPY --chown=$UID:$GID --from=dafl /fuzzer /fuzzer
+COPY --chown=$UID:$GID --from=score /fuzzer /fuzzer
 
 ## Copy program with each fuzzer image 
 
