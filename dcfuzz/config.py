@@ -40,6 +40,10 @@ CONFIG: Dict = {
         'binary_root': '',
         'binary_crash_root': '',
     },
+    'score_DAFL':{
+        'command' : '/fuzzer/score/afl-fuzz'
+        'target_root' : '/benchmark/bin/DAFL'
+    }
     # only specify basic things
     # how to launch fuzzers with proper arguments is handled by fuzzer driver
     # new input dir need !!!! OOO
