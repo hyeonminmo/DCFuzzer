@@ -1,6 +1,6 @@
 import os
 import sys
-import pathlib
+from pathlib import Path
 import shutil
 import time
 import logging
@@ -26,10 +26,11 @@ def gen_run_args(seed, output, program):
 
     target_config = CONFIG['target'][program]
     target_args = target_config['args']['default']
-    # logger.info(f"evaluator 101 - command : {command},  target_args : {target_args}, target_root : {target_root}")
+    logger.info(f"evaluator 101 - command : {command},  target_args : {target_args}, target_root : {target_root}")
 
     args += [command, '-i', seed, '-o', output]
     args += ['-m', 'none']
+    args += ['-t', '5000']
     args += ['-d']
     args += ['--', target_root]
     if not target_args == '':
@@ -49,25 +50,29 @@ def parse_score_file(path):
         bitmap_size = int(parts[-1])
 
         filename_parts = parts[1:-3]
-        if seed_id == 0:
-            seed_name = filename_parts[0]
-            exec_time = 0
-        else:
-            seed_name = filename_parts[0]       
-            exec_time = int(filename_parts[1]) 
+        # if seed_id == 0:
+        #     seed_name = filename_parts[0]
+        #     exec_time = 0
+        # else:
+        #     seed_name = filename_parts[0]       
+        #     exec_time = int(filename_parts[1]) 
             
         results[seed_id] = {
-            "seedName": seed_name,
-            "execTime": exec_time,
+            "filename": filename_parts,
             "Prox_Score": prox_score,
             "Bitmap_Size": bitmap_size
         }
-          
     return results
 
 def wait_for_file(path):
+    wait_time = 0 
     while not os.path.exists(path):
-        time.sleep(0.1)
+        wait_time+=1
+        time.sleep(1)
+        if wait_time == 600:
+            logger.info(f'evaluator 666 - no exists')
+            break
+        
         
 def cleanup(score_dir, score_file):
     if os.path.exists(score_file):
@@ -84,20 +89,43 @@ def cleanup(score_dir, score_file):
         elif os.path.isdir(path):
             shutil.rmtree(path)
 
+def snapshot_dir(src_queue: str, dst_dir: str):
+    logger.info(f'evaluator 003 -  src_queue : {src_queue}, dst_dir:{dst_dir}')
+    src = Path(src_queue)
+    dst = Path(dst_dir)
+    if dst.exists():
+        shutil.rmtree(dst)
+    dst.mkdir(parents=True, exist_ok=True)
+
+    for p in src.iterdir():
+        if p.is_file():
+            shutil.copy2(p, dst / p.name)
+
+
 def extract_score(fuzzer, seed, output_dir, program):
-    # logger.info(f'evaluator 001 - fuzzer : {fuzzer}, seed : {seed}, output_dir : {output_dir}, program : {program}')
+    logger.info(f'evaluator 001 - fuzzer : {fuzzer}, seed : {seed}, output_dir : {output_dir}, program : {program}')
     # example - fuzzer : aflgo, seed : /home/dcfuzz/output/swftophp-2016-9827/aflgo/queue, output_dir : /home/dcfuzz/output/swftophp-2016-9827/score, program : swftophp-2016-9827
     seed_path = os.path.realpath(seed)
     output_path = os.path.realpath(output_dir)
     base_dir = "/home/dcfuzz"
+    snapshot_input = os.path.join(output_path, "input_snapshot")
 
-    args = gen_run_args(seed=seed_path, output=output_path, program=program)
-    # logger.info(f'evaluator 002 - args : {args}')
+    snapshot_dir(src_queue=seed_path, dst_dir=snapshot_input)
+
+    args = gen_run_args(seed=snapshot_input, output=output_path, program=program)
+    logger.info(f'evaluator 002 - args : {args}')
     
-    result = subprocess.run(args,
-                            stdin=subprocess.DEVNULL,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
+    # result = subprocess.run(args,
+    #                         stdin=subprocess.DEVNULL,
+    #                         stdout=subprocess.DEVNULL,
+    #                         stderr=subprocess.DEVNULL)
+    
+    result = subprocess.run(args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    if result.returncode != 0:
+        logger.info(f"evaluator 9999 : afl-fuzz failed")
+        logger.info(f"evaluator 6666 : stdout:\n{result.stdout}")
+        logger.info(f"evaluator 6666 : stderr:\n{result.stderr}")
     
     score_path = os.path.join(base_dir, "initial_seed_scores.txt")
     wait_for_file(path= score_path)
