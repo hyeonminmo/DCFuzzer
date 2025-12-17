@@ -24,6 +24,16 @@ function build_target() {
     /benchmark/project/build-target.sh $1
 }
 
+function build_target_native() {
+    # Strangely, some C programs use CXX for compiler. So set CXX* vars, too.
+    export CC=$2
+    export CXX=$3
+    export CFLAGS="$4"
+    export CXXFLAGS="$4"
+    /benchmark/patches/build-target.sh $1 $5 $6
+}
+
+
 # arg1 : project name
 # arg2 : binary name
 # arg3 : bug name
@@ -38,7 +48,7 @@ function copy_build_result() {
     echo "fuzzer : $4"
     echo "path : $(pwd)"
 
-    if [ -d RUNDIR-$1/$2 ]; then
+    if [ -e RUNDIR-$1/$2 ]; then
 	    echo "exist directory" 
     else
 	    echo "not exist directory"
