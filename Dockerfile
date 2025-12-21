@@ -1,12 +1,13 @@
 FROM fuzzer_base3/aflgo AS aflgo
 FROM fuzzer_base3/windranger AS windranger
-FROM fuzzer_base3/dafl AS dafl
+FROM fuzzer_base3/dafl2 AS dafl
 FROM fuzzer_base3/score AS score
 
 FROM dcfuzz_bench/aflgo AS bench_aflgo
 FROM dcfuzz_bench2/windranger AS bench_windranger
 FROM dcfuzz_bench2/dafl AS bench_dafl
 FROM dcfuzz_bench/asan AS bench_asan
+FROM dcfuzz_bench/native AS bench_native
 #FROM dcfuzz_bench/patch AS bench_patch
 
 FROM ubuntu:20.04
@@ -61,17 +62,19 @@ COPY --chown=$UID:$GID --from=windranger /fuzzer /fuzzer
 COPY --chown=$UID:$GID --from=dafl /fuzzer /fuzzer
 COPY --chown=$UID:$GID --from=score /fuzzer /fuzzer
 
+
 ## Copy program with each fuzzer image 
 
 #COPY --chown=$UID:$GID --from=bench_aflgo /benchmark/bin /benchmark/bin
 COPY --chown=$UID:$GID --from=bench_asan /benchmark/bin /benchmark/bin
-#COPY --chown=$UID:$GID --from=bench_patch /benchmark/bin /benchmark/bin
+COPY --chown=$UID:$GID --from=bench_native /benchmark/bin /benchmark/bin
+COPY --chown=$UID:$GID --from=bench_native /benchmark/patches /benchmark/patches
+
 COPY --chown=$UID:$GID --from=bench_windranger /benchmark/bin /benchmark/bin
+#COPY --chown=$UID:$GID --from=bench_patch /benchmark/bin /benchmark/bin
 #COPY --chown=$UID:$GID --from=bench_dafl /benchmark /benchmark
 #COPY --chown=$UID:$GID --from=bench_dafl /sparrow /sparrow
 #COPY --chown=$UID:$GID --from=bench_dafl /smake /smake
-
-
 
 
 # Copy 

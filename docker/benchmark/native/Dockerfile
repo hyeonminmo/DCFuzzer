@@ -14,5 +14,5 @@ WORKDIR /benchmark
 RUN echo "****************build native********************"
 
 COPY native/build_bench_native.sh /benchmark/build_bench_native.sh
-# RUN ./build_bench_native.sh
-# RUN rm /benchmark/build_bench_native.sh
+RUN ./build_bench_native.sh
+RUN rm /benchmark/build_bench_native.sh

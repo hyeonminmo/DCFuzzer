@@ -37,6 +37,6 @@ build_with_Native "binutils-2.26" \
     "cxxfilt 2016-4489 2016-4490 2016-4491 2016-4492 2016-6131" 
 build_with_Native "binutils-2.28" \
     "objdump 2017-8392 2017-8396 2017-8397 2017-8398" 
-# build_with_Native "binutils-2.29" "nm 2017-14940" 
+build_with_Native "binutils-2.29" "nm 2017-14940" 
 
-# wait
+wait

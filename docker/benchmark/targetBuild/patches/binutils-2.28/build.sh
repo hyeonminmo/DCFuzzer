@@ -18,29 +18,26 @@ inject_hit_by_name_line() {
 
   offset=0
 
+  if ! grep -qE '^\s*#include\s*<stdio\.h>' "$file"; then
+    sed -i '/^#include "sysdep\.h"/a #include <stdio.h>' "$file"
+    offset=$((offset+1))
+  fi
   if ! grep -qE '^\s*#include\s*<stdlib\.h>' "$file"; then
-    sed -i '1i #include <stdlib.h>' "$file"
+    sed -i '/^#include "sysdep\.h"/a #include <stdlib.h>' "$file"
     offset=$((offset+1))
   fi
 
-  if ! grep -qE '^\s*#include\s*<stdio\.h>' "$file"; then
-    sed -i '1i #include <stdio.h>' "$file"
-    offset=$((offset+1))
-  fi
   adjusted_line=$((line + offset))
 
   # 특정 라인
   local indent
+  local insert
+  indent="$(sed -n "${adjusted_line}p" "$file" | sed -E 's/^([[:space:]]*).*/\1/')"
+  
+  insert="${indent}fprintf(stderr, \"[DCFuzz][HIT]\\\\n\"); fflush(stderr); _Exit(123);"
+  sed -i "${adjusted_line}a\\$insert" "$file"
 
-  if [[ "$filename" == "libbfd.c" && "$line" -eq 548 ]]; then
-    indent="$(sed -n "${adjusted_line}p" "$file" | sed -E 's/^([[:space:]]*).*/\1/' | sed $'s/\t/  /g')"
-  else
-    indent="$(sed -n "${adjusted_line}p" "$file" | sed -E 's/^([[:space:]]*).*/\1/')"
-  fi  
 
-  sed -i "${adjusted_line}a\\
-  ${indent}fprintf(stderr, \"[DCFuzz][HIT]\\\\n\"); fflush(stderr); _Exit(123);\
-  " "$file"
 }
 
 inject_from_line_file() {

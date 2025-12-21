@@ -72,7 +72,7 @@ def is_end():
     current_time = time.time()
     elasp = current_time - START_TIME
     timeout_seconds = TIMEOUT
-    # logger.info(f'main 900 - elasp : {elasp}, timeout_seconds :{timeout_seconds}, current_time : {current_time}, START_TIME : {START_TIME} ')
+    logger.info(f'main 99999 - elasp : {elasp}, timeout_seconds :{timeout_seconds}, current_time : {current_time}, START_TIME : {START_TIME} ')
     return elasp >= timeout_seconds + diff
 
 
@@ -98,7 +98,7 @@ def sleep(seconds: int, log=False):
     remain = seconds
     while remain and not is_end():
         t = min(remain, SLEEP_GRANULARITY)
-        logger.info(f'main 903 - remain: {remain}, SLEEP_GRAUNLARITY: {SLEEP_GRANULARITY}, t : {t}')
+        # logger.info(f'main 903 - remain: {remain}, SLEEP_GRAUNLARITY: {SLEEP_GRANULARITY}, t : {t}')
         time.sleep(t)
         remain -= t
 
@@ -134,7 +134,7 @@ def gen_fuzzer_driver_args(fuzzer: str,
         'thread': jobs,
         'cgroup_path': cgroup_path
     }
-    logging.info(f'main 1001 - kw : {kw}')
+    # logging.info(f'main 1001 - kw : {kw}')
     return kw
 
 def start(fuzzer: str, output_dir, timeout, input_dir=None):
@@ -301,7 +301,7 @@ def init():
     pathlib.Path(health_check_path).touch(mode=0o666, exist_ok=True)
     LOG['log'] = []
     LOG['round'] = []
-    logger.info(f'main 002.5- init end')
+    logger.info(f'main 002.5 - init end')
 
 def init_cgroup():
     logger.info(f'main 200 - cgroup init start')
@@ -444,12 +444,16 @@ class Schedule_Single(Schedule_Base):
     def __init__(self, fuzzers, single):
         self.fuzzers = fuzzers
         self.single = single
+        self.round = 1
         self.name = f'Single_{single}'
 
     def one_round(self):
         logger.info(f'main 701 - one_round start')
         self.run_one(self.single)
         sleep(60)
+        # score = evaluate_score(self.single)
+        # logger.info(f'main 702 - single round {self.round} end - {self.single} perform  : {score}')
+        
     
     def main(self):
         logger.info(f'main 700 - single_fuzzer : {self.single}')
@@ -457,6 +461,7 @@ class Schedule_Single(Schedule_Base):
             if is_end(): return
             #if not self.pre_round(): continue
             self.one_round()
+            self.round+=1
         logger.info(f'main 709 - end')
             #self.post_round()
 
@@ -492,73 +497,98 @@ class Schedule_DCFuzz(Schedule_Base):
     def prep(self):
         round_start_time = time.time()
 
-        global OUTPUT, TARGET
+        global OUTPUT, TARGET, START_TIME
         logger.info(f'main 500 - start preparation phase')
+        PRIORITY = ['dafl', 'windranger', 'aflgo']
         
         # set prep variable
-        prep_fuzzers = self.fuzzers       
+        prep_fuzzers = sorted(
+            self.fuzzers,
+            key=lambda f: PRIORITY.index(f) if f in PRIORITY else len(PRIORITY)
+        )
+        # prep_fuzzers = self.fuzzers       
         prep_time = self.prep_time
         remain_time = prep_time
         prep_round = 1
         perform = defaultdict(list)
+        prep_start_time = time.time()
 
         do_sync(self.fuzzers, OUTPUT)
 
         logger.info(f'main 501 - sync end')
         
         while remain_time > 0 :
-            run_time = min(remain_time,30)
+            run_time = min(remain_time,150)
 
             for prep_fuzzer in prep_fuzzers:
                 logger.info(f'main 502 - prep_fuzzer : {prep_fuzzer}, run time : {run_time}')
                 self.run_one(prep_fuzzer)
                 sleep(run_time)
+                before_time = time.time()
                 score = evaluate_score(prep_fuzzer)
                 perform[prep_fuzzer].append({
                     'prep_round': prep_round,
                     'score': score
                 })
-                logger.info(f'main 503 - prep round {prep_round} end - {prep_fuzzer} perform  : {perform[prep_fuzzer]}')
-                
+                after_time = time.time()
+                evaluate_run_time = after_time - before_time
+                logger.info(f'main 503 - prep round {prep_round} end - {prep_fuzzer} perform  : {perform[prep_fuzzer]}, evaluate_run_time: {evaluate_run_time}')
+            
             remain_time -= run_time
             prep_round +=1
             do_sync(self.fuzzers, OUTPUT)
-            
-            for fuzzer in prep_fuzzers:
-                self.dcFuzzers[fuzzer].score = max(entry['score'] for entry in perform[fuzzer])
-                logger.info(f'main 503 - round {self.round} prep phase end - {fuzzer} max score  : {self.dcFuzzers[fuzzer].score}')
+        
+        prep_end_time = time.time()
+        prep_run_time = prep_end_time - prep_start_time
+
+        for fuzzer in prep_fuzzers:
+            self.dcFuzzers[fuzzer].score = max(entry['score'] for entry in perform[fuzzer])
+            logger.info(f'main 504 - round {self.round} prep phase end - {fuzzer} max score  : {self.dcFuzzers[fuzzer].score}')
+
+        logger.info(f'main 505 - prep round {self.round} end - prep_start_time: {prep_start_time}, prep_end_time:{prep_end_time}, prep_run_time : {prep_run_time}')
                 
                 
     def focus(self):
-        logger.info(f'main 504 - start focus phase')
-        focus_start_time = time.time()
+        logger.info(f'main 506- start focus phase')
         global OUTPUT
+        focus_start_time = time.time()
 
         focus_time = self.focus_time
         
         thompson.rankFuzzer(self.dcFuzzers)
         
         for fuzzer in self.fuzzers:
-            logger.info(f'main 505 - {self.round} round {fuzzer} rank -  success :{self.dcFuzzers[fuzzer].S}, failure :{self.dcFuzzers[fuzzer].F}')
+            logger.info(f'main 507 - {self.round} round {fuzzer} rank -  success :{self.dcFuzzers[fuzzer].S}, failure :{self.dcFuzzers[fuzzer].F}')
         
         selected_fuzzer = thompson.selectFuzzer(self.dcFuzzers)
         
-        logger.info(f'main 506 -  selected_fuzzer : {selected_fuzzer}')
-        
-        while focus_time > 0: 
-            run_time = min(focus_time,60)
-            self.run_one(selected_fuzzer)
-            sleep(run_time)
-            focus_time -= run_time
-            
+        logger.info(f'main 508 -  selected_fuzzer : {selected_fuzzer}')
+        self.run_one(selected_fuzzer)
+        sleep(focus_time)
+        # while focus_time > 0: 
+        #     run_time = focus_time
+        #     run_time = min(focus_time,150)
+        #     self.run_one(selected_fuzzer)
+        #     sleep(run_time)
+        #     focus_time -= run_time
+
+        evaluate_start_time = time.time()
         score = evaluate_score(selected_fuzzer)
-        logger.info(f'main 507 - round {self.round} prep phase end - {selected_fuzzer} max score  : {score}')
+        evaluate_end_time = time.time()
+
+        evaluate_run_time = evaluate_end_time - evaluate_start_time
+        logger.info(f'main 509 - round {self.round} focus phase end - {selected_fuzzer} max score  : {score}')
+        logger.info(f'main 666 - round {self.round} focus phase evaluate - evaluate_run_time : {evaluate_run_time}')
         
         do_sync(self.fuzzers, OUTPUT)
+        focus_end_time = time.time()
+        focus_run_time = focus_end_time - focus_start_time
+        
         for fuzzer in self.fuzzers:
-            dcFuzzers[fuzzer] = thompson.fuzzer()
-        self.round+=1
+            self.dcFuzzers[fuzzer] = thompson.fuzzer()
 
+        logger.info(f'main 510 - focus round {self.round} end - focus_start_time: {focus_start_time}, focus_end_time:{focus_end_time}, focus_run_time : {focus_run_time}')
+        
     def main(self):
         # if is_end():return
         # logger.info(f'main 801 - dcfuzz start')
@@ -567,10 +597,11 @@ class Schedule_DCFuzz(Schedule_Base):
         while True:
             if is_end():return
             #if not self.pre_round():continue
-            logger.info(f'main 801 - focus phase round {self.round} start')
+            logger.info(f'main 801 - dcfuzz phase round {self.round} start')
             self.prep()
             self.focus()
-            logger.info(f'main 803 - focus phase round {self.round} end')
+            logger.info(f'main 803 - dcfuzz phase round {self.round} end')
+            self.round+=1
             #self.post_round()
         
     def pre_run(self) -> bool:

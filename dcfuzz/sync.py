@@ -117,7 +117,7 @@ def sync2(target: str, fuzzers: List[str], host_root_dir: Path):
     # init observer
     # scan all before observer init or make sure observer init first
 
-    logging.info(f'sync 001 - start sync XXX')
+    logging.info(f'sync 001 - start sync')
 
     init(target, fuzzers, host_root_dir)
     target_config = config['target'][target]
