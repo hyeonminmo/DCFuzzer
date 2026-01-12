@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import glob
 import hashlib
 import logging
@@ -95,6 +93,7 @@ def new_afl_filename(fuzzer):
     index[fuzzer] += 1
     return f'id:{new_index:06d}'
 
+# 이전 sync_test_case 함수로 각 퍼저 내에 dcfuzz 폴더를 생성하고 새로운 test case 를 추가함.
 def sync_test_case(target, fuzzer, host_root_dir, testcase):
     fuzzer_config = config['fuzzer'][fuzzer]
     fuzzer_root_dir = os.path.join(host_root_dir, target, fuzzer)
@@ -107,9 +106,7 @@ def sync_test_case(target, fuzzer, host_root_dir, testcase):
     rel_path = os.path.relpath(testcase.filename,
                                os.path.dirname(new_filename))
 
-    # NOTE: every fuzzer will copy file before executing (they should)
     os.symlink(rel_path, new_filename)
-
 
 def sync2(target: str, fuzzers: List[str], host_root_dir: Path):
     global LAST_INDEX

@@ -93,13 +93,6 @@ def wait_for_file(path):
 
 
 def cleanup_score_artifacts(score_file, snapshot_dir, score_workdir):
-    """
-    one-shot evaluator 전제:
-    - score_workdir 는 매번 새로 만들고(run) 끝나면 통째로 삭제
-    - snapshot_input 도 임시이므로 삭제
-    - score_file(initial_seed_scores.txt)도 잔재 방지 위해 삭제
-    - DB(sqlite)는 건드리지 않음
-    """
     if os.path.exists(score_file):
         try:
             os.remove(score_file)
@@ -227,23 +220,23 @@ def extract_score(fuzzer, seed, output_dir, program):
         return max_cached
 
     name_to_score = parse_score_file(score_path)
+    parsed_scores = list(name_to_score.values())
+
     SeedModel = get_seed_model(fuzzer)
     with database.atomic():
-        for name in staged_names:
-            # logger.info(f"evaluator 013 - name : {name}")
-            if name in name_to_score:
-                prox, bmsz = name_to_score[name]
-            else:
-                prox, bmsz = -1, -1
-
+        for name, (prox, bmsz) in zip(staged_names, parsed_scores):
             row, _ = SeedModel.get_or_create(name=name)
             row.prox_score = prox
             row.bitmap_size = bmsz
             row.save()
 
-    # ✅ 정리: score 파일 + snapshot + score_workdir 삭제, DB는 유지
     cleanup_score_artifacts(score_file=score_path, snapshot_dir=snapshot_input, score_workdir=score_workdir)
 
     max_score = max_prox_from_db(fuzzer)
     logger.info(f"evaluator 020 - fuzzer={fuzzer} max_score(from DB)={max_score}")
     return max_score
+
+
+
+
+

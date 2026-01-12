@@ -86,7 +86,6 @@ CONFIG: Dict = {
                 'default': '',
             }
             # fuzzers that do not support this target.
-            # rcfuzz will do some sanity check when started.
         },
         'cxxfilt-2016-4490': {
             'group': 'binutils',

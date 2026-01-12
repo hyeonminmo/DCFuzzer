@@ -8,7 +8,7 @@ fuzzer_list=(
     windranger
     dafl
     score
-    distance
+    #distance
 )
 
 USER=$(id -un)

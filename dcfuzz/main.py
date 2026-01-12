@@ -439,7 +439,6 @@ class Schedule_Base(SchedulingAlgorithm):
     def post_run(self):
         logger.info(f"main 920 - {self.name}: post_run")
 
-
 class Schedule_Single(Schedule_Base):
     def __init__(self, fuzzers, single):
         self.fuzzers = fuzzers
@@ -478,7 +477,6 @@ class Schedule_Single(Schedule_Base):
     def post_run(self):
         logger.info(f"main 720 - single fuzzer {self.name}: post_run")
 
-
 # multi fuzzer 실행하기
 class Schedule_DCFuzz(Schedule_Base):
     def __init__(self, fuzzers, dcFuzzers, prep_time=600, focus_time=600):
@@ -513,9 +511,7 @@ class Schedule_DCFuzz(Schedule_Base):
         perform = defaultdict(list)
         prep_start_time = time.time()
 
-        do_sync(self.fuzzers, OUTPUT)
-
-        logger.info(f'main 501 - sync end')
+        do_sync(self.fuzzers, OUTPUT)        
         
         while remain_time > 0 :
             run_time = min(remain_time,150)
@@ -617,13 +613,10 @@ class Schedule_DCFuzz(Schedule_Base):
     def post_run(self):
         logger.info(f"main 820 - {self.name}: post_run")
 
-
-
 def main():
     global ARGS, TARGET, FUZZERS, OUTPUT, INPUT, TIMEOUT, PREP_TIME, FOCUS_TIME
     global START_TIME, LOG_DATETIME, LOG_FILE_NAME
     global CPU_ASSIGN
-
 
     ARGS = cli.ArgsParser().parse_args()
 
@@ -675,7 +668,7 @@ def main():
         start(fuzzer=fuzzer, output_dir = OUTPUT, timeout=TIMEOUT, input_dir=INPUT)
         logger.info(f'main 004.5 - start after')  
 
-        time.sleep(2)
+        time.sleep(1)
         start_time = time.time()
         while not check_fuzzer_ready_one(fuzzer):
             current_time = time.time()
