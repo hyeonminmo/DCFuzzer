@@ -50,9 +50,10 @@ def checksum(filename: str) -> str:
     return ret
 
 class TestCase(object):
-    def __init__(self, filename: Path):
+    def __init__(self, filename: Path, src_fuzzer:str=None):
         self.filename = filename
         self.__checksum = None
+        self.src_fuzzer =src_fuzzer
 
     @property
     def checksum(self):
@@ -73,7 +74,6 @@ def init_dir(dcfuzz_dir: Path) -> None:
     queue_dir = os.path.join(dcfuzz_dir, 'queue')
     for d in [crash_dir, hang_dir, queue_dir]:
         os.makedirs(d, exist_ok=True)
-    logging.info(f'sync 003 - crash_dir : {crash_dir}, hang_dir :{hang_dir}, queue_dir:{queue_dir} XXX')
 
 def init(target: str, fuzzers: List[str], host_root_dir: Path) -> None:
     # logging.info(f'sync 002 - start init XXX')
@@ -84,14 +84,14 @@ def init(target: str, fuzzers: List[str], host_root_dir: Path) -> None:
         dcfuzz_dir = fuzzer_root_dir / 'dcfuzz'
         init_dir(dcfuzz_dir)
 
-def new_afl_filename(fuzzer):
+def new_afl_filename(fuzzer, dcfuzzer):
     global index
     new_index = None
     if fuzzer not in index:
         index[fuzzer] = 0
     new_index = index[fuzzer]
     index[fuzzer] += 1
-    return f'id:{new_index:06d}'
+    return f'{dcfuzzer}_id:{new_index:06d}'
 
 # 이전 sync_test_case 함수로 각 퍼저 내에 dcfuzz 폴더를 생성하고 새로운 test case 를 추가함.
 def sync_test_case(target, fuzzer, host_root_dir, testcase):
@@ -99,12 +99,12 @@ def sync_test_case(target, fuzzer, host_root_dir, testcase):
     fuzzer_root_dir = os.path.join(host_root_dir, target, fuzzer)
     dcfuzz_dir = os.path.join(fuzzer_root_dir, 'dcfuzz')
     queue_dir = os.path.join(dcfuzz_dir, 'queue')
-    # logger.debug(f'copy {testcase.filename} to {queue_dir}')
-    new_name = new_afl_filename(fuzzer)
+    new_name = new_afl_filename(fuzzer, testcase.src_fuzzer)
     new_filename = os.path.join(queue_dir, new_name)
 
     rel_path = os.path.relpath(testcase.filename,
                                os.path.dirname(new_filename))
+    logger.info(f"sync 666 - [sync] copy {fuzzer} <- {testcase.src_fuzzer} : {new_name} <- {str(testcase.filename)}")
 
     os.symlink(rel_path, new_filename)
 
@@ -151,7 +151,7 @@ def sync2(target: str, fuzzers: List[str], host_root_dir: Path):
                 test_case_path = w.test_case_queue[i]
                 if w._ignore_test_case(test_case_path):
                     continue
-                test_case = TestCase(test_case_path)
+                test_case = TestCase(test_case_path, src_fuzzer=fuzzer)
                 processed_checksum[fuzzer].add(test_case.checksum)
                 if test_case.checksum not in global_processed_checksum:
                     global_new_test_cases.append(test_case)

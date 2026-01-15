@@ -514,7 +514,7 @@ class Schedule_DCFuzz(Schedule_Base):
         do_sync(self.fuzzers, OUTPUT)        
         
         while remain_time > 0 :
-            run_time = min(remain_time,150)
+            run_time = min(remain_time,30)
 
             for prep_fuzzer in prep_fuzzers:
                 logger.info(f'main 502 - prep_fuzzer : {prep_fuzzer}, run time : {run_time}')

@@ -45,10 +45,11 @@ def gen_run_args(seed, output, program):
 def normalize_afl_seed_id(name: str) -> str:
     """
     Extract only 'id:XXXXXX' from AFL seed name.
+    Accepts both 'id:XXXXXX' and '{fuzzer}_id:XXXXXX'.
     """
     base = os.path.basename(name)
 
-    m = re.match(r"(id:\d+)", base)
+    m = re.search(r"((?:[a-zA-Z0-9]+_)?id:\d+)", base)
     if not m:
         raise ValueError(f"Invalid AFL seed name: {name}")
 
@@ -57,7 +58,7 @@ def normalize_afl_seed_id(name: str) -> str:
 def extract_afl_seed_id(line: str) -> str:
     _, rest = line.split(",", 1)          
     base = os.path.basename(rest)         
-    m = re.search(r"\bid:\d+\b", base)    
+    m = re.search(r"((?:[a-zA-Z0-9]+_)?id:\d+)", base)    
     if not m:
         raise ValueError(f"Cannot find seed id in line: {line}")
     return m.group(0)
