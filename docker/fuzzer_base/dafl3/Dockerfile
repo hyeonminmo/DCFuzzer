@@ -22,7 +22,7 @@ RUN cd /fuzzer/DAFL && \
 /^[[:space:]]*int[[:space:]]\+main[[:space:]]*[(]/i\
 /* === DCFuzz runtime import (no env) === */\
 static u8*  import_dir; \
-static u64  import_interval_us = 60000000; /* 60s */\
+static u64  import_interval_us = 150000000; /* 150s */\
 static u64  last_import_us;\
 \
 /* minimal file reader (avoid DAFL helper deps) */\

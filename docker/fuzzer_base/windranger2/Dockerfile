@@ -24,7 +24,7 @@ RUN cd /fuzzer/WindRanger/fuzz && \
 /^[[:space:]]*int[[:space:]]\+main[[:space:]]*[(]/i\
 /* === DCFuzz runtime import (no env) === */\
 static u8*  import_dir; \
-static u64  import_interval_us = 60000000; /* 60 seconds */\
+static u64  import_interval_us = 150000000; /* 150 seconds */\
 static u64  last_import_us;\
 \
 /* minimal file reader (avoid AFLGo helper deps) */\

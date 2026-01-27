@@ -511,10 +511,10 @@ class Schedule_DCFuzz(Schedule_Base):
         perform = defaultdict(list)
         prep_start_time = time.time()
 
-        do_sync(self.fuzzers, OUTPUT)        
+        #do_sync(self.fuzzers, OUTPUT)        
         
         while remain_time > 0 :
-            run_time = min(remain_time,30)
+            run_time = min(remain_time,150)
 
             for prep_fuzzer in prep_fuzzers:
                 logger.info(f'main 502 - prep_fuzzer : {prep_fuzzer}, run time : {run_time}')
@@ -575,8 +575,9 @@ class Schedule_DCFuzz(Schedule_Base):
         evaluate_run_time = evaluate_end_time - evaluate_start_time
         logger.info(f'main 509 - round {self.round} focus phase end - {selected_fuzzer} max score  : {score}')
         logger.info(f'main 666 - round {self.round} focus phase evaluate - evaluate_run_time : {evaluate_run_time}')
-        
+
         do_sync(self.fuzzers, OUTPUT)
+        
         focus_end_time = time.time()
         focus_run_time = focus_end_time - focus_start_time
         
